@@ -31,6 +31,7 @@ module CMark (
   , Title
   , Level
   , Info
+  , TableCellAlignment(..)
   , CMarkOption
   , CMarkExtension
   ) where
