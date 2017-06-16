@@ -45,6 +45,13 @@ extra-source-files:  README.md
                      cbits/plugin.h
                      cbits/registry.h
                      cbits/syntax_extension.h
+                     cbits/autolink.h
+                     cbits/core-extensions.h
+                     cbits/ext_scanners.h
+                     cbits/strikethrough.h
+                     cbits/table.h
+                     cbits/tagfilter.h
+                     cbits/cmarkextensions_export.h
                      bench/sample.md
                      bench/full-sample.md
 cabal-version:       >=1.14
@@ -97,6 +104,12 @@ library
                        cbits/plugin.c
                        cbits/registry.c
                        cbits/syntax_extension.c
+                       cbits/autolink.c
+                       cbits/core-extensions.c
+                       cbits/ext_scanners.c
+                       cbits/strikethrough.c
+                       cbits/table.c
+                       cbits/tagfilter.c
 
 benchmark bench-cmark
   type:             exitcode-stdio-1.0
