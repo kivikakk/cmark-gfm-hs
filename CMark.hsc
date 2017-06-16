@@ -53,15 +53,24 @@ import Control.Applicative ((<$>), (<*>))
 #include <cmark.h>
 #include <core-extensions.h>
 
+-- | Register core extensions.  This should be done once at program start.
 registerPlugins :: IO ()
 registerPlugins = c_cmark_register_plugin c_core_extensions_registration
 
+-- | Frees a cmark linked list, produced by extsToLlist.
+freeLlist :: LlistPtr a -> IO ()
+freeLlist = c_cmark_llist_free c_CMARK_DEFAULT_MEM_ALLOCATOR
+
+-- | Converts a list of resolved extension pointers to a single cmark
+-- linked list, which can be passed to functions requiring a list of
+-- extensions.
 extsToLlist :: [ExtensionPtr] -> IO (LlistPtr ExtensionPtr)
 extsToLlist [] = return nullPtr
 extsToLlist (h:t) = do
   t' <- extsToLlist t
   c_cmark_llist_append c_CMARK_DEFAULT_MEM_ALLOCATOR t' (castPtr h)
 
+-- | Resolves a CMarkExtension to its pointer.
 resolveExt :: CMarkExtension -> IO (Maybe ExtensionPtr)
 resolveExt e = do
   p <- withCString (unCMarkExtension e) c_cmark_find_syntax_extension
@@ -73,7 +82,11 @@ commonmarkToHtml :: [CMarkOption] -> [CMarkExtension] -> Text -> Text
 commonmarkToHtml opts exts =
   commonmarkToX render_html opts exts Nothing
   where exts' = Unsafe.unsafePerformIO $ fmap catMaybes $ mapM resolveExt exts
-        render_html n o _ = c_cmark_render_html n o (Unsafe.unsafePerformIO $ extsToLlist exts')
+        render_html n o _ = Unsafe.unsafePerformIO $ do
+          llist <- extsToLlist exts'
+          let r = c_cmark_render_html n o llist
+          freeLlist llist
+          return r
 
 -- | Convert CommonMark formatted text to CommonMark XML, using cmark's
 -- built-in renderer.
@@ -109,7 +122,11 @@ nodeToHtml :: [CMarkOption] -> [CMarkExtension] -> Node -> Text
 nodeToHtml opts exts =
   nodeToX render_html opts Nothing
   where exts' = Unsafe.unsafePerformIO $ fmap catMaybes $ mapM resolveExt exts
-        render_html n o _ = c_cmark_render_html n o (Unsafe.unsafePerformIO $ extsToLlist exts')
+        render_html n o _ = Unsafe.unsafePerformIO $ do
+          llist <- extsToLlist exts'
+          let r = c_cmark_render_html n o llist
+          freeLlist llist
+          return r
 
 nodeToXml :: [CMarkOption] -> Node -> Text
 nodeToXml opts = nodeToX render_xml opts Nothing
