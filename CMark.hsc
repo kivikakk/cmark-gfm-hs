@@ -222,6 +222,9 @@ type OnEnter = Text
 
 type OnExit = Text
 
+data TableCellAlignment = None | Left | Center | Right
+     deriving (Show, Read, Eq, Ord, Typeable, Data, Generic)
+
 data NodeType =
     DOCUMENT
   | THEMATIC_BREAK
@@ -244,6 +247,9 @@ data NodeType =
   | LINK Url Title
   | IMAGE Url Title
   | STRIKETHROUGH
+  | TABLE [TableCellAlignment]
+  | TABLE_ROW
+  | TABLE_CELL
   deriving (Show, Read, Eq, Ord, Typeable, Data, Generic)
 
 data PosInfo = PosInfo{ startLine   :: Int
@@ -335,10 +341,16 @@ ptrToNodeType ptr = do
          -> return SOFTBREAK
        #const CMARK_NODE_LINEBREAK
          -> return LINEBREAK
-       _ -> if nodeType == (Unsafe.unsafePerformIO $ peekElemOff c_CMARK_NODE_STRIKETHROUGH 0) then
+       _ -> if nodeType == fromIntegral (Unsafe.unsafePerformIO $ peek c_CMARK_NODE_STRIKETHROUGH) then
               return STRIKETHROUGH
+            else if nodeType == fromIntegral (Unsafe.unsafePerformIO $ peek c_CMARK_NODE_TABLE) then
+              TABLE <$> alignments
+            else if nodeType == fromIntegral (Unsafe.unsafePerformIO $ peek c_CMARK_NODE_TABLE_ROW) then
+              return TABLE_ROW
+            else if nodeType == fromIntegral (Unsafe.unsafePerformIO $ peek c_CMARK_NODE_TABLE_CELL) then
+              return TABLE_CELL
             else
-              error "Unknown node type"
+              error $ "Unknown node type " ++ (show nodeType)
   where literal   = c_cmark_node_get_literal ptr >>= totext
         level     = c_cmark_node_get_heading_level ptr
         onEnter    = c_cmark_node_get_on_enter ptr >>= totext
@@ -363,6 +375,14 @@ ptrToNodeType ptr = do
         url       = c_cmark_node_get_url ptr >>= totext
         title     = c_cmark_node_get_title ptr >>= totext
         info      = c_cmark_node_get_fence_info ptr >>= totext
+        alignments = do
+          ncols <- c_cmarkextensions_get_table_columns ptr
+          cols <- c_cmarkextensions_get_table_alignments ptr
+          mapM (fmap ucharToAlignment . peekElemOff cols) [0..(fromIntegral ncols) - 1]
+        ucharToAlignment (CUChar 108) = CMark.Left
+        ucharToAlignment (CUChar 99)  = CMark.Center
+        ucharToAlignment (CUChar 114) = CMark.Right
+        ucharToAlignment _            = None
 
 getPosInfo :: NodePtr -> IO (Maybe PosInfo)
 getPosInfo ptr = do
@@ -618,4 +638,19 @@ foreign import ccall "cmark_extension_api.h cmark_parser_attach_syntax_extension
     c_cmark_parser_attach_syntax_extension :: ParserPtr -> ExtensionPtr -> IO ()
 
 foreign import ccall "strikethrough.h &CMARK_NODE_STRIKETHROUGH"
-    c_CMARK_NODE_STRIKETHROUGH :: Ptr Int
+    c_CMARK_NODE_STRIKETHROUGH :: Ptr CUShort
+
+foreign import ccall "table.h &CMARK_NODE_TABLE"
+    c_CMARK_NODE_TABLE :: Ptr CUShort
+
+foreign import ccall "table.h &CMARK_NODE_TABLE_ROW"
+    c_CMARK_NODE_TABLE_ROW :: Ptr CUShort
+
+foreign import ccall "table.h &CMARK_NODE_TABLE_CELL"
+    c_CMARK_NODE_TABLE_CELL :: Ptr CUShort
+
+foreign import ccall "core-extensions.h cmarkextensions_get_table_columns"
+    c_cmarkextensions_get_table_columns :: NodePtr -> IO CUShort
+
+foreign import ccall "core-extensions.h cmarkextensions_get_table_alignments"
+    c_cmarkextensions_get_table_alignments :: NodePtr -> IO (Ptr CUChar)
