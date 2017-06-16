@@ -243,6 +243,7 @@ data NodeType =
   | STRONG
   | LINK Url Title
   | IMAGE Url Title
+  | STRIKETHROUGH
   deriving (Show, Read, Eq, Ord, Typeable, Data, Generic)
 
 data PosInfo = PosInfo{ startLine   :: Int
@@ -334,7 +335,10 @@ ptrToNodeType ptr = do
          -> return SOFTBREAK
        #const CMARK_NODE_LINEBREAK
          -> return LINEBREAK
-       _ -> error "Unknown node type"
+       _ -> if nodeType == (Unsafe.unsafePerformIO $ peekElemOff c_CMARK_NODE_STRIKETHROUGH 0) then
+              return STRIKETHROUGH
+            else
+              error "Unknown node type"
   where literal   = c_cmark_node_get_literal ptr >>= totext
         level     = c_cmark_node_get_heading_level ptr
         onEnter    = c_cmark_node_get_on_enter ptr >>= totext
@@ -612,3 +616,6 @@ foreign import ccall "cmark.h &CMARK_DEFAULT_MEM_ALLOCATOR"
 
 foreign import ccall "cmark_extension_api.h cmark_parser_attach_syntax_extension"
     c_cmark_parser_attach_syntax_extension :: ParserPtr -> ExtensionPtr -> IO ()
+
+foreign import ccall "strikethrough.h &CMARK_NODE_STRIKETHROUGH"
+    c_CMARK_NODE_STRIKETHROUGH :: Ptr Int
