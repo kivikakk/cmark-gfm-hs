@@ -56,11 +56,11 @@ import Control.Applicative ((<$>), (<*>))
 registerPlugins :: IO ()
 registerPlugins = c_cmark_register_plugin c_core_extensions_registration
 
-extsToLlist :: [ExtensionPtr] -> IO LlistPtr
+extsToLlist :: [ExtensionPtr] -> IO (LlistPtr ExtensionPtr)
 extsToLlist [] = return nullPtr
 extsToLlist (h:t) = do
   t' <- extsToLlist t
-  c_cmark_llist_append c_CMARK_DEFAULT_MEM_ALLOCATOR t' h
+  c_cmark_llist_append c_CMARK_DEFAULT_MEM_ALLOCATOR t' (castPtr h)
 
 resolveExt :: CMarkExtension -> IO (Maybe ExtensionPtr)
 resolveExt e = do
@@ -72,7 +72,7 @@ resolveExt e = do
 commonmarkToHtml :: [CMarkOption] -> [CMarkExtension] -> Text -> Text
 commonmarkToHtml opts exts =
   commonmarkToX render_html opts exts Nothing
-  where exts' = catMaybes $ Unsafe.unsafePerformIO $ mapM resolveExt exts
+  where exts' = Unsafe.unsafePerformIO $ fmap catMaybes $ mapM resolveExt exts
         render_html n o _ = c_cmark_render_html n o (Unsafe.unsafePerformIO $ extsToLlist exts')
 
 -- | Convert CommonMark formatted text to CommonMark XML, using cmark's
@@ -151,12 +151,23 @@ commonmarkToX renderer opts exts mbWidth s = Unsafe.unsafePerformIO $
       t <- TF.peekCStringLen $! (str, c_strlen str)
       return t
 
-type ParserPtr = Ptr ()
-type NodePtr = Ptr ()
-type LlistPtr = Ptr ()
-type MemPtr = Ptr ()
-type PluginPtr = Ptr ()
-type ExtensionPtr = Ptr ()
+data ParserPhantom
+type ParserPtr = Ptr ParserPhantom
+
+data NodePhantom
+type NodePtr = Ptr NodePhantom
+
+data LlistPhantom a
+type LlistPtr a = Ptr (LlistPhantom a)
+
+data MemPhantom
+type MemPtr = Ptr MemPhantom
+
+data PluginPhantom
+type PluginPtr = Ptr PluginPhantom
+
+data ExtensionPhantom
+type ExtensionPtr = Ptr ExtensionPhantom
 
 data Node = Node (Maybe PosInfo) NodeType [Node]
      deriving (Show, Read, Eq, Ord, Typeable, Data, Generic)
@@ -441,7 +452,7 @@ foreign import ccall "cmark.h cmark_node_new"
     c_cmark_node_new :: Int -> IO NodePtr
 
 foreign import ccall "cmark.h cmark_render_html"
-    c_cmark_render_html :: NodePtr -> CInt -> LlistPtr -> IO CString
+    c_cmark_render_html :: NodePtr -> CInt -> LlistPtr ExtensionPtr -> IO CString
 
 foreign import ccall "cmark.h cmark_render_xml"
     c_cmark_render_xml :: NodePtr -> CInt -> IO CString
@@ -570,10 +581,10 @@ foreign import ccall "cmark_extension_api.h cmark_find_syntax_extension"
     c_cmark_find_syntax_extension :: CString -> IO ExtensionPtr
 
 foreign import ccall "cmark.h cmark_llist_append"
-    c_cmark_llist_append :: MemPtr -> LlistPtr -> Ptr () -> IO LlistPtr
+    c_cmark_llist_append :: MemPtr -> LlistPtr a -> Ptr () -> IO (LlistPtr a)
 
 foreign import ccall "cmark.h cmark_llist_free"
-    c_cmark_llist_free :: MemPtr -> LlistPtr -> IO ()
+    c_cmark_llist_free :: MemPtr -> LlistPtr a -> IO ()
 
 foreign import ccall "cmark.h &CMARK_DEFAULT_MEM_ALLOCATOR"
     c_CMARK_DEFAULT_MEM_ALLOCATOR :: MemPtr
