@@ -58,12 +58,9 @@ registerPlugins = c_cmark_register_plugin c_core_extensions_registration
 
 extsToLlist :: [ExtensionPtr] -> IO LlistPtr
 extsToLlist [] = return nullPtr
-extsToLlist (h:t) = return nullPtr -- do
-{-
+extsToLlist (h:t) = do
   t' <- extsToLlist t
-  fmap castPtr $ c_cmark_llist_append c_CMARK_DEFAULT_MEM_ALLOCATOR h (castPtr t')
-
-  -}
+  c_cmark_llist_append c_CMARK_DEFAULT_MEM_ALLOCATOR t' h
 
 resolveExt :: CMarkExtension -> IO (Maybe ExtensionPtr)
 resolveExt e = do

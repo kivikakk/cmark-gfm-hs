@@ -30,6 +30,6 @@ tests = TestList [
   , "<p>| a |\n| --- |\n| b |</p>\n" ~=? commonmarkToHtml [] [] "| a |\n| --- |\n| b |\n"
   , "<table>\n<thead>\n<tr>\n<th>a</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>b</td>\n</tr></tbody></table>\n" ~=? commonmarkToHtml [] [extTable] "| a |\n| --- |\n| b |\n"
   , "<xmp>\n" ~=? commonmarkToHtml [] [] "<xmp>"
-  , "<p>&lt;xmp></p>\n" ~=? commonmarkToHtml [] [extTagfilter] "<xmp>"
+  , "&lt;xmp>\n" ~=? commonmarkToHtml [] [extTagfilter] "<xmp>"
   ]
 
