@@ -7,6 +7,7 @@ module CMark (
   , commonmarkToMan
   , commonmarkToLaTeX
   , commonmarkToNode
+  , registerPlugins
   , nodeToHtml
   , nodeToXml
   , nodeToMan
@@ -16,6 +17,10 @@ module CMark (
   , optHardBreaks
   , optSmart
   , optSafe
+  , extStrikethrough
+  , extTable
+  , extAutolink
+  , extTagfilter
   , Node(..)
   , NodeType(..)
   , PosInfo(..)
@@ -27,6 +32,7 @@ module CMark (
   , Level
   , Info
   , CMarkOption
+  , CMarkExtension
   ) where
 
 import Foreign
@@ -44,59 +50,66 @@ import Data.Text.Encoding (encodeUtf8)
 import Control.Applicative ((<$>), (<*>))
 
 #include <cmark.h>
+#include <core-extensions.h>
+
+registerPlugins :: IO ()
+registerPlugins = c_cmark_register_plugin c_core_extensions_registration
 
 -- | Convert CommonMark formatted text to Html, using cmark's
 -- built-in renderer.
-commonmarkToHtml :: [CMarkOption] -> Text -> Text
-commonmarkToHtml opts = commonmarkToX render_html opts Nothing
+commonmarkToHtml :: [CMarkOption] -> [CMarkExtension] -> Text -> Text
+commonmarkToHtml opts exts = commonmarkToX render_html opts exts Nothing
   where render_html n o _ = c_cmark_render_html n o nullPtr
 
 -- | Convert CommonMark formatted text to CommonMark XML, using cmark's
 -- built-in renderer.
-commonmarkToXml :: [CMarkOption] -> Text -> Text
-commonmarkToXml opts = commonmarkToX render_xml opts Nothing
+commonmarkToXml :: [CMarkOption] -> [CMarkExtension] -> Text -> Text
+commonmarkToXml opts exts = commonmarkToX render_xml opts exts Nothing
   where render_xml n o _ = c_cmark_render_xml n o
 
 -- | Convert CommonMark formatted text to groff man, using cmark's
 -- built-in renderer.
-commonmarkToMan :: [CMarkOption] -> Maybe Int -> Text -> Text
+commonmarkToMan :: [CMarkOption] -> [CMarkExtension] -> Maybe Int -> Text -> Text
 commonmarkToMan = commonmarkToX c_cmark_render_man
 
 -- | Convert CommonMark formatted text to latex, using cmark's
 -- built-in renderer.
-commonmarkToLaTeX :: [CMarkOption] -> Maybe Int -> Text -> Text
+commonmarkToLaTeX :: [CMarkOption] -> [CMarkExtension] -> Maybe Int -> Text -> Text
 commonmarkToLaTeX = commonmarkToX c_cmark_render_latex
 
 -- | Convert CommonMark formatted text to a structured 'Node' tree,
 -- which can be transformed or rendered using Haskell code.
-commonmarkToNode :: [CMarkOption] -> Text -> Node
-commonmarkToNode opts s = Unsafe.unsafePerformIO $ do
-  nptr <- TF.withCStringLen s $! \(ptr, len) ->
-             c_cmark_parse_document ptr len (combineOptions opts)
+commonmarkToNode :: [CMarkOption] -> [CMarkExtension] -> Text -> Node
+commonmarkToNode opts exts s = Unsafe.unsafePerformIO $ do
+  parser <- c_cmark_parser_new (combineOptions opts)
+  TF.withCStringLen s $! \(ptr, len) ->
+             c_cmark_parser_feed parser ptr len
+  nptr <- c_cmark_parser_finish parser
+  c_cmark_parser_free parser
   fptr <- newForeignPtr c_cmark_node_free nptr
   withForeignPtr fptr toNode
 
-nodeToHtml :: [CMarkOption] -> Node -> Text
-nodeToHtml opts = nodeToX render_html opts Nothing
+nodeToHtml :: [CMarkOption] -> [CMarkExtension] -> Node -> Text
+nodeToHtml opts exts = nodeToX render_html opts exts Nothing
   where render_html n o _ = c_cmark_render_html n o nullPtr
 
-nodeToXml :: [CMarkOption] -> Node -> Text
-nodeToXml opts = nodeToX render_xml opts Nothing
+nodeToXml :: [CMarkOption] -> [CMarkExtension] -> Node -> Text
+nodeToXml opts exts = nodeToX render_xml opts exts Nothing
   where render_xml n o _ = c_cmark_render_xml n o
 
-nodeToMan :: [CMarkOption] -> Maybe Int -> Node -> Text
+nodeToMan :: [CMarkOption] -> [CMarkExtension] -> Maybe Int -> Node -> Text
 nodeToMan = nodeToX c_cmark_render_man
 
-nodeToLaTeX :: [CMarkOption] -> Maybe Int -> Node -> Text
+nodeToLaTeX :: [CMarkOption] -> [CMarkExtension] -> Maybe Int -> Node -> Text
 nodeToLaTeX = nodeToX c_cmark_render_latex
 
-nodeToCommonmark :: [CMarkOption] -> Maybe Int -> Node -> Text
+nodeToCommonmark :: [CMarkOption] -> [CMarkExtension] -> Maybe Int -> Node -> Text
 nodeToCommonmark = nodeToX c_cmark_render_commonmark
 
 type Renderer = NodePtr -> CInt -> Int -> IO CString
 
-nodeToX :: Renderer -> [CMarkOption] -> Maybe Int -> Node -> Text
-nodeToX renderer opts mbWidth node = Unsafe.unsafePerformIO $ do
+nodeToX :: Renderer -> [CMarkOption] -> [CMarkExtension] -> Maybe Int -> Node -> Text
+nodeToX renderer opts exts mbWidth node = Unsafe.unsafePerformIO $ do
   nptr <- fromNode node
   fptr <- newForeignPtr c_cmark_node_free nptr
   withForeignPtr fptr $ \ptr -> do
@@ -105,21 +118,28 @@ nodeToX renderer opts mbWidth node = Unsafe.unsafePerformIO $ do
 
 commonmarkToX :: Renderer
               -> [CMarkOption]
+              -> [CMarkExtension]
               -> Maybe Int
               -> Text
               -> Text
-commonmarkToX renderer opts mbWidth s = Unsafe.unsafePerformIO $
+commonmarkToX renderer opts exts mbWidth s = Unsafe.unsafePerformIO $
   TF.withCStringLen s $ \(ptr, len) -> do
     let opts' = combineOptions opts
-    nptr <- c_cmark_parse_document ptr len opts'
+    parser <- c_cmark_parser_new opts'
+    c_cmark_parser_feed parser ptr len
+    nptr <- c_cmark_parser_finish parser
+    c_cmark_parser_free parser
     fptr <- newForeignPtr c_cmark_node_free nptr
     withForeignPtr fptr $ \p -> do
       str <- renderer p opts' (fromMaybe 0 mbWidth)
       t <- TF.peekCStringLen $! (str, c_strlen str)
       return t
 
+type ParserPtr = Ptr ()
 type NodePtr = Ptr ()
 type LlistPtr = Ptr ()
+type PluginPtr = Ptr ()
+type ExtensionPtr = Ptr ()
 
 data Node = Node (Maybe PosInfo) NodeType [Node]
      deriving (Show, Read, Eq, Ord, Typeable, Data, Generic)
@@ -205,6 +225,20 @@ optSmart = CMarkOption #const CMARK_OPT_SMART
 -- and images.
 optSafe :: CMarkOption
 optSafe = CMarkOption #const CMARK_OPT_SAFE
+
+newtype CMarkExtension = CMarkExtension { unCMarkExtension :: String }
+
+extStrikethrough :: CMarkExtension
+extStrikethrough = CMarkExtension "strikethrough"
+
+extTable :: CMarkExtension
+extTable = CMarkExtension "table"
+
+extAutolink :: CMarkExtension
+extAutolink = CMarkExtension "autolink"
+
+extTagfilter :: CMarkExtension
+extTagfilter = CMarkExtension "tagfilter"
 
 ptrToNodeType :: NodePtr -> IO NodeType
 ptrToNodeType ptr = do
@@ -404,8 +438,17 @@ foreign import ccall "cmark.h cmark_render_latex"
 foreign import ccall "cmark.h cmark_render_commonmark"
     c_cmark_render_commonmark :: NodePtr -> CInt -> Int -> IO CString
 
-foreign import ccall "cmark.h cmark_parse_document"
-    c_cmark_parse_document :: CString -> Int -> CInt -> IO NodePtr
+foreign import ccall "cmark.h cmark_parser_new"
+    c_cmark_parser_new :: CInt -> IO ParserPtr
+
+foreign import ccall "cmark.h cmark_parser_feed"
+    c_cmark_parser_feed :: ParserPtr -> CString -> Int -> IO ()
+
+foreign import ccall "cmark.h cmark_parser_finish"
+    c_cmark_parser_finish :: ParserPtr -> IO NodePtr
+
+foreign import ccall "cmark.h cmark_parser_free"
+    c_cmark_parser_free :: ParserPtr -> IO ()
 
 foreign import ccall "cmark.h cmark_node_get_type"
     c_cmark_node_get_type :: NodePtr -> IO Int
@@ -499,3 +542,12 @@ foreign import ccall "cmark.h cmark_node_set_on_exit"
 
 foreign import ccall "cmark.h &cmark_node_free"
     c_cmark_node_free :: FunPtr (NodePtr -> IO ())
+
+foreign import ccall "registry.h cmark_register_plugin"
+    c_cmark_register_plugin :: FunPtr (PluginPtr -> IO Int) -> IO ()
+
+foreign import ccall "core-extensions.h &core_extensions_registration"
+    c_core_extensions_registration :: FunPtr (PluginPtr -> IO Int)
+
+foreign import ccall "cmark_extension_api.h cmark_find_syntax_extension"
+    c_cmark_find_syntax_extension :: CString -> IO ExtensionPtr
