@@ -42,8 +42,12 @@ void cmark_strbuf_grow(cmark_strbuf *buf, bufsize_t target_size) {
   if (target_size < buf->asize)
     return;
 
-  if (target_size > (bufsize_t)(INT32_MAX / 2))
+  if (target_size > (bufsize_t)(INT32_MAX / 2)) {
+    fprintf(stderr,
+      "[cmark] cmark_strbuf_grow requests buffer with size > %d, aborting\n",
+         (INT32_MAX / 2));
     abort();
+  }
 
   /* Oversize the buffer by 50% to guarantee amortized linear time
    * complexity on append operations. */
@@ -92,7 +96,7 @@ void cmark_strbuf_set(cmark_strbuf *buf, const unsigned char *data,
 
 void cmark_strbuf_sets(cmark_strbuf *buf, const char *string) {
   cmark_strbuf_set(buf, (const unsigned char *)string,
-                   string ? strlen(string) : 0);
+                   string ? (bufsize_t)strlen(string) : 0);
 }
 
 void cmark_strbuf_putc(cmark_strbuf *buf, int c) {
@@ -113,7 +117,7 @@ void cmark_strbuf_put(cmark_strbuf *buf, const unsigned char *data,
 }
 
 void cmark_strbuf_puts(cmark_strbuf *buf, const char *string) {
-  cmark_strbuf_put(buf, (const unsigned char *)string, strlen(string));
+  cmark_strbuf_put(buf, (const unsigned char *)string, (bufsize_t)strlen(string));
 }
 
 void cmark_strbuf_copy_cstr(char *data, bufsize_t datasize,

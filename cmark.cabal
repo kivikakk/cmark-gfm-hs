@@ -40,6 +40,11 @@ extra-source-files:  README.md
                      cbits/scanners.h
                      cbits/case_fold_switch.inc
                      cbits/entities.inc
+                     cbits/cmark_extension_api.h
+                     cbits/html.h
+                     cbits/plugin.h
+                     cbits/registry.h
+                     cbits/syntax_extension.h
                      bench/sample.md
                      bench/full-sample.md
 cabal-version:       >=1.14
@@ -86,6 +91,12 @@ library
                        cbits/latex.c
                        cbits/xml.c
                        cbits/render.c
+                       cbits/arena.c
+                       cbits/linked_list.c
+                       cbits/plaintext.c
+                       cbits/plugin.c
+                       cbits/registry.c
+                       cbits/syntax_extension.c
 
 benchmark bench-cmark
   type:             exitcode-stdio-1.0
