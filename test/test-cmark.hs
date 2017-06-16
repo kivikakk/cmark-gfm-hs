@@ -27,5 +27,7 @@ tests = TestList [
   , "<p><del>hi</del></p>\n" ~=? commonmarkToHtml [] [extStrikethrough] "~hi~"
   , "<p>www.google.com</p>\n" ~=? commonmarkToHtml [] [] "www.google.com"
   , "<p><a href=\"http://www.google.com\">www.google.com</a></p>\n" ~=? commonmarkToHtml [] [extAutolink] "www.google.com"
+  , "<p>| a |\n| --- |\n| b |</p>\n" ~=? commonmarkToHtml [] [] "| a |\n| --- |\n| b |\n"
+  , "<table>\n<thead>\n<tr>\n<th>a</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>b</td>\n</tr></tbody></table>\n" ~=? commonmarkToHtml [] [extTable] "| a |\n| --- |\n| b |\n"
   ]
 
