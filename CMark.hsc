@@ -480,6 +480,10 @@ fromNode (Node _ nodeType children) = do
                      return n
             SOFTBREAK   -> c_cmark_node_new (#const CMARK_NODE_SOFTBREAK)
             LINEBREAK   -> c_cmark_node_new (#const CMARK_NODE_LINEBREAK)
+            STRIKETHROUGH -> c_cmark_node_new (fromIntegral . Unsafe.unsafePerformIO $ peek c_CMARK_NODE_STRIKETHROUGH)
+            TABLE _       -> error "constructing table not supported"
+            TABLE_ROW     -> error "constructing table row not supported"
+            TABLE_CELL    -> error "constructing table cell not supported"
   mapM_ (\child -> fromNode child >>= c_cmark_node_append_child node) children
   return node
 
