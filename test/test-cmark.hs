@@ -23,5 +23,9 @@ tests = TestList [
   , ".RS\n.PP\nquote\n.RE\n" ~=? commonmarkToMan [] [] Nothing "> quote"
   , (Node (Just (PosInfo {startLine = 1, startColumn = 1, endLine = 1, endColumn = 13})) DOCUMENT [Node (Just (PosInfo {startLine = 1, startColumn = 1, endLine = 1, endColumn = 13})) PARAGRAPH [Node Nothing (TEXT "Hello ") [],Node Nothing EMPH [Node Nothing (TEXT "world") []]]]) ~=? commonmarkToNode [] [] "Hello *world*"
   , "> Hello\n> *world*\n" ~=? nodeToCommonmark [] [] (Just 12) (Node Nothing DOCUMENT [Node Nothing BLOCK_QUOTE [Node Nothing PARAGRAPH [Node Nothing (TEXT "Hello ") [],Node Nothing EMPH [Node Nothing (TEXT "world") []]]]])
+  , "<p>~hi~</p>\n" ~=? commonmarkToHtml [] [] "~hi~"
+  , "<p><del>hi</del></p>\n" ~=? commonmarkToHtml [] [extStrikethrough] "~hi~"
+  , "<p>www.google.com</p>\n" ~=? commonmarkToHtml [] [] "www.google.com"
+  , "<p><a href=\"http://www.google.com\">www.google.com</a></p>" ~=? commonmarkToHtml [] [extAutolink] "www.google.com"
   ]
 
