@@ -95,7 +95,9 @@ commonmarkToLaTeX = commonmarkToX c_cmark_render_latex
 -- which can be transformed or rendered using Haskell code.
 commonmarkToNode :: [CMarkOption] -> [CMarkExtension] -> Text -> Node
 commonmarkToNode opts exts s = Unsafe.unsafePerformIO $ do
+  exts' <- fmap catMaybes $ mapM resolveExt exts
   parser <- c_cmark_parser_new (combineOptions opts)
+  mapM_ (c_cmark_parser_attach_syntax_extension parser) exts'
   TF.withCStringLen s $! \(ptr, len) ->
              c_cmark_parser_feed parser ptr len
   nptr <- c_cmark_parser_finish parser
@@ -104,26 +106,28 @@ commonmarkToNode opts exts s = Unsafe.unsafePerformIO $ do
   withForeignPtr fptr toNode
 
 nodeToHtml :: [CMarkOption] -> [CMarkExtension] -> Node -> Text
-nodeToHtml opts exts = nodeToX render_html opts exts Nothing
-  where render_html n o _ = c_cmark_render_html n o nullPtr
+nodeToHtml opts exts =
+  nodeToX render_html opts Nothing
+  where exts' = Unsafe.unsafePerformIO $ fmap catMaybes $ mapM resolveExt exts
+        render_html n o _ = c_cmark_render_html n o (Unsafe.unsafePerformIO $ extsToLlist exts')
 
-nodeToXml :: [CMarkOption] -> [CMarkExtension] -> Node -> Text
-nodeToXml opts exts = nodeToX render_xml opts exts Nothing
+nodeToXml :: [CMarkOption] -> Node -> Text
+nodeToXml opts = nodeToX render_xml opts Nothing
   where render_xml n o _ = c_cmark_render_xml n o
 
-nodeToMan :: [CMarkOption] -> [CMarkExtension] -> Maybe Int -> Node -> Text
+nodeToMan :: [CMarkOption] -> Maybe Int -> Node -> Text
 nodeToMan = nodeToX c_cmark_render_man
 
-nodeToLaTeX :: [CMarkOption] -> [CMarkExtension] -> Maybe Int -> Node -> Text
+nodeToLaTeX :: [CMarkOption] -> Maybe Int -> Node -> Text
 nodeToLaTeX = nodeToX c_cmark_render_latex
 
-nodeToCommonmark :: [CMarkOption] -> [CMarkExtension] -> Maybe Int -> Node -> Text
+nodeToCommonmark :: [CMarkOption] -> Maybe Int -> Node -> Text
 nodeToCommonmark = nodeToX c_cmark_render_commonmark
 
 type Renderer = NodePtr -> CInt -> Int -> IO CString
 
-nodeToX :: Renderer -> [CMarkOption] -> [CMarkExtension] -> Maybe Int -> Node -> Text
-nodeToX renderer opts exts mbWidth node = Unsafe.unsafePerformIO $ do
+nodeToX :: Renderer -> [CMarkOption] -> Maybe Int -> Node -> Text
+nodeToX renderer opts mbWidth node = Unsafe.unsafePerformIO $ do
   nptr <- fromNode node
   fptr <- newForeignPtr c_cmark_node_free nptr
   withForeignPtr fptr $ \ptr -> do
