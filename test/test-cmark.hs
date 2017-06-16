@@ -25,6 +25,7 @@ tests = TestList [
   , "> Hello\n> *world*\n" ~=? nodeToCommonmark [] (Just 12) (Node Nothing DOCUMENT [Node Nothing BLOCK_QUOTE [Node Nothing PARAGRAPH [Node Nothing (TEXT "Hello ") [],Node Nothing EMPH [Node Nothing (TEXT "world") []]]]])
   , "<p>~hi~</p>\n" ~=? commonmarkToHtml [] [] "~hi~"
   , "<p><del>hi</del></p>\n" ~=? commonmarkToHtml [] [extStrikethrough] "~hi~"
+  , (Node (Just (PosInfo {startLine = 1, startColumn = 1, endLine = 1, endColumn = 4})) DOCUMENT [Node (Just (PosInfo {startLine = 1, startColumn = 1, endLine = 1, endColumn = 4})) PARAGRAPH [Node Nothing STRIKETHROUGH [Node Nothing (TEXT "hi") []]]]) ~=? commonmarkToNode [] [extStrikethrough] "~hi~"
   , "<p>www.google.com</p>\n" ~=? commonmarkToHtml [] [] "www.google.com"
   , "<p><a href=\"http://www.google.com\">www.google.com</a></p>\n" ~=? commonmarkToHtml [] [extAutolink] "www.google.com"
   , "<p>| a |\n| --- |\n| b |</p>\n" ~=? commonmarkToHtml [] [] "| a |\n| --- |\n| b |\n"
