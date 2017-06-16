@@ -37,10 +37,11 @@ module CMark (
 
 import Foreign
 import Foreign.C.Types
-import Foreign.C.String (CString)
+import Foreign.C.String (CString, withCString)
 import qualified System.IO.Unsafe as Unsafe
 import Data.Maybe (fromMaybe)
 import GHC.Generics (Generic)
+import Data.Maybe (catMaybes)
 import Data.Data (Data)
 import Data.Typeable (Typeable)
 import Data.Text (Text, empty)
@@ -55,11 +56,27 @@ import Control.Applicative ((<$>), (<*>))
 registerPlugins :: IO ()
 registerPlugins = c_cmark_register_plugin c_core_extensions_registration
 
+extsToLlist :: [ExtensionPtr] -> IO LlistPtr
+extsToLlist [] = return nullPtr
+extsToLlist (h:t) = return nullPtr -- do
+{-
+  t' <- extsToLlist t
+  fmap castPtr $ c_cmark_llist_append c_CMARK_DEFAULT_MEM_ALLOCATOR h (castPtr t')
+
+  -}
+
+resolveExt :: CMarkExtension -> IO (Maybe ExtensionPtr)
+resolveExt e = do
+  p <- withCString (unCMarkExtension e) c_cmark_find_syntax_extension
+  return (if p == nullPtr then Nothing else Just p)
+
 -- | Convert CommonMark formatted text to Html, using cmark's
 -- built-in renderer.
 commonmarkToHtml :: [CMarkOption] -> [CMarkExtension] -> Text -> Text
-commonmarkToHtml opts exts = commonmarkToX render_html opts exts Nothing
-  where render_html n o _ = c_cmark_render_html n o nullPtr
+commonmarkToHtml opts exts =
+  commonmarkToX render_html opts exts Nothing
+  where exts' = catMaybes $ Unsafe.unsafePerformIO $ mapM resolveExt exts
+        render_html n o _ = c_cmark_render_html n o (Unsafe.unsafePerformIO $ extsToLlist exts')
 
 -- | Convert CommonMark formatted text to CommonMark XML, using cmark's
 -- built-in renderer.
@@ -125,7 +142,9 @@ commonmarkToX :: Renderer
 commonmarkToX renderer opts exts mbWidth s = Unsafe.unsafePerformIO $
   TF.withCStringLen s $ \(ptr, len) -> do
     let opts' = combineOptions opts
+    exts' <- fmap catMaybes $ mapM resolveExt exts
     parser <- c_cmark_parser_new opts'
+    mapM_ (c_cmark_parser_attach_syntax_extension parser) exts'
     c_cmark_parser_feed parser ptr len
     nptr <- c_cmark_parser_finish parser
     c_cmark_parser_free parser
@@ -138,6 +157,7 @@ commonmarkToX renderer opts exts mbWidth s = Unsafe.unsafePerformIO $
 type ParserPtr = Ptr ()
 type NodePtr = Ptr ()
 type LlistPtr = Ptr ()
+type MemPtr = Ptr ()
 type PluginPtr = Ptr ()
 type ExtensionPtr = Ptr ()
 
@@ -551,3 +571,15 @@ foreign import ccall "core-extensions.h &core_extensions_registration"
 
 foreign import ccall "cmark_extension_api.h cmark_find_syntax_extension"
     c_cmark_find_syntax_extension :: CString -> IO ExtensionPtr
+
+foreign import ccall "cmark.h cmark_llist_append"
+    c_cmark_llist_append :: MemPtr -> LlistPtr -> Ptr () -> IO LlistPtr
+
+foreign import ccall "cmark.h cmark_llist_free"
+    c_cmark_llist_free :: MemPtr -> LlistPtr -> IO ()
+
+foreign import ccall "cmark.h &CMARK_DEFAULT_MEM_ALLOCATOR"
+    c_CMARK_DEFAULT_MEM_ALLOCATOR :: MemPtr
+
+foreign import ccall "cmark_extension_api.h cmark_parser_attach_syntax_extension"
+    c_cmark_parser_attach_syntax_extension :: ParserPtr -> ExtensionPtr -> IO ()
