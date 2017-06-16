@@ -13,7 +13,6 @@ module CMark (
   , nodeToLaTeX
   , nodeToCommonmark
   , optSourcePos
-  , optNormalize
   , optHardBreaks
   , optSmart
   , optSafe
@@ -50,7 +49,7 @@ import Control.Applicative ((<$>), (<*>))
 -- built-in renderer.
 commonmarkToHtml :: [CMarkOption] -> Text -> Text
 commonmarkToHtml opts = commonmarkToX render_html opts Nothing
-  where render_html n o _ = c_cmark_render_html n o
+  where render_html n o _ = c_cmark_render_html n o nullPtr
 
 -- | Convert CommonMark formatted text to CommonMark XML, using cmark's
 -- built-in renderer.
@@ -79,7 +78,7 @@ commonmarkToNode opts s = Unsafe.unsafePerformIO $ do
 
 nodeToHtml :: [CMarkOption] -> Node -> Text
 nodeToHtml opts = nodeToX render_html opts Nothing
-  where render_html n o _ = c_cmark_render_html n o
+  where render_html n o _ = c_cmark_render_html n o nullPtr
 
 nodeToXml :: [CMarkOption] -> Node -> Text
 nodeToXml opts = nodeToX render_xml opts Nothing
@@ -120,6 +119,7 @@ commonmarkToX renderer opts mbWidth s = Unsafe.unsafePerformIO $
       return t
 
 type NodePtr = Ptr ()
+type LlistPtr = Ptr ()
 
 data Node = Node (Maybe PosInfo) NodeType [Node]
      deriving (Show, Read, Eq, Ord, Typeable, Data, Generic)
@@ -196,10 +196,6 @@ optSourcePos = CMarkOption #const CMARK_OPT_SOURCEPOS
 -- | Render @softbreak@ elements as hard line breaks.
 optHardBreaks :: CMarkOption
 optHardBreaks = CMarkOption #const CMARK_OPT_HARDBREAKS
-
--- | Normalize the document by consolidating adjacent text nodes.
-optNormalize :: CMarkOption
-optNormalize = CMarkOption #const CMARK_OPT_NORMALIZE
 
 -- | Convert straight quotes to curly, @---@ to em-dash, @--@ to en-dash.
 optSmart :: CMarkOption
@@ -394,7 +390,7 @@ foreign import ccall "cmark.h cmark_node_new"
     c_cmark_node_new :: Int -> IO NodePtr
 
 foreign import ccall "cmark.h cmark_render_html"
-    c_cmark_render_html :: NodePtr -> CInt -> IO CString
+    c_cmark_render_html :: NodePtr -> CInt -> LlistPtr -> IO CString
 
 foreign import ccall "cmark.h cmark_render_xml"
     c_cmark_render_xml :: NodePtr -> CInt -> IO CString
