@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP, ForeignFunctionInterface, GeneralizedNewtypeDeriving,
     DeriveGeneric, DeriveDataTypeable, FlexibleContexts #-}
 
-module CMark (
+module CMarkGFM (
     commonmarkToHtml
   , commonmarkToXml
   , commonmarkToMan
@@ -380,9 +380,9 @@ ptrToNodeType ptr = do
           ncols <- c_cmarkextensions_get_table_columns ptr
           cols <- c_cmarkextensions_get_table_alignments ptr
           mapM (fmap ucharToAlignment . peekElemOff cols) [0..(fromIntegral ncols) - 1]
-        ucharToAlignment (CUChar 108) = CMark.Left
-        ucharToAlignment (CUChar 99)  = CMark.Center
-        ucharToAlignment (CUChar 114) = CMark.Right
+        ucharToAlignment (CUChar 108) = CMarkGFM.Left
+        ucharToAlignment (CUChar 99)  = CMarkGFM.Center
+        ucharToAlignment (CUChar 114) = CMarkGFM.Right
         ucharToAlignment _            = None
 
 getPosInfo :: NodePtr -> IO (Maybe PosInfo)
