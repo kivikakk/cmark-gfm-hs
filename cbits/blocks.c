@@ -1104,8 +1104,8 @@ static void open_new_blocks(cmark_parser *parser, cmark_node **container,
       }
 
       if (!new_container) {
-      break;
-    }
+        break;
+      }
     }
 
     if (accepts_lines(S_type(*container))) {
@@ -1260,6 +1260,13 @@ static void S_process_line(cmark_parser *parser, const unsigned char *buffer,
 
   input.data = parser->curline.ptr;
   input.len = parser->curline.size;
+  input.alloc = 0;
+
+  // Skip UTF-8 BOM.
+  if (parser->line_number == 0 &&
+      input.len >= 3 &&
+      memcmp(input.data, "\xef\xbb\xbf", 3) == 0)
+    parser->offset += 3;
 
   parser->line_number++;
 
@@ -1305,7 +1312,7 @@ cmark_node *cmark_parser_finish(cmark_parser *parser) {
 
   finalize_document(parser);
 
-    cmark_consolidate_text_nodes(parser->root);
+  cmark_consolidate_text_nodes(parser->root);
 
   cmark_strbuf_free(&parser->curline);
   cmark_strbuf_free(&parser->linebuf);
