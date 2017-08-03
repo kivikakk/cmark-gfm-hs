@@ -1,22 +1,26 @@
 {-# LANGUAGE CPP, ForeignFunctionInterface, GeneralizedNewtypeDeriving,
     DeriveGeneric, DeriveDataTypeable, FlexibleContexts #-}
 
-module CMark (
+module CMarkGFM (
     commonmarkToHtml
   , commonmarkToXml
   , commonmarkToMan
   , commonmarkToLaTeX
   , commonmarkToNode
+  , registerPlugins
   , nodeToHtml
   , nodeToXml
   , nodeToMan
   , nodeToLaTeX
   , nodeToCommonmark
   , optSourcePos
-  , optNormalize
   , optHardBreaks
   , optSmart
   , optSafe
+  , extStrikethrough
+  , extTable
+  , extAutolink
+  , extTagfilter
   , Node(..)
   , NodeType(..)
   , PosInfo(..)
@@ -27,15 +31,18 @@ module CMark (
   , Title
   , Level
   , Info
+  , TableCellAlignment(..)
   , CMarkOption
+  , CMarkExtension
   ) where
 
 import Foreign
 import Foreign.C.Types
-import Foreign.C.String (CString)
+import Foreign.C.String (CString, withCString)
 import qualified System.IO.Unsafe as Unsafe
 import Data.Maybe (fromMaybe)
 import GHC.Generics (Generic)
+import Data.Maybe (catMaybes)
 import Data.Data (Data)
 import Data.Typeable (Typeable)
 import Data.Text (Text, empty)
@@ -45,41 +52,82 @@ import Data.Text.Encoding (encodeUtf8)
 import Control.Applicative ((<$>), (<*>))
 
 #include <cmark.h>
+#include <core-extensions.h>
+
+-- | Register core extensions.  This should be done once at program start.
+registerPlugins :: IO ()
+registerPlugins = c_cmark_register_plugin c_core_extensions_registration
+
+-- | Frees a cmark linked list, produced by extsToLlist.
+freeLlist :: LlistPtr a -> IO ()
+freeLlist = c_cmark_llist_free c_CMARK_DEFAULT_MEM_ALLOCATOR
+
+-- | Converts a list of resolved extension pointers to a single cmark
+-- linked list, which can be passed to functions requiring a list of
+-- extensions.
+extsToLlist :: [ExtensionPtr] -> IO (LlistPtr ExtensionPtr)
+extsToLlist [] = return nullPtr
+extsToLlist (h:t) = do
+  t' <- extsToLlist t
+  c_cmark_llist_append c_CMARK_DEFAULT_MEM_ALLOCATOR t' (castPtr h)
+
+-- | Resolves a CMarkExtension to its pointer.
+resolveExt :: CMarkExtension -> IO (Maybe ExtensionPtr)
+resolveExt e = do
+  p <- withCString (unCMarkExtension e) c_cmark_find_syntax_extension
+  return (if p == nullPtr then Nothing else Just p)
 
 -- | Convert CommonMark formatted text to Html, using cmark's
 -- built-in renderer.
-commonmarkToHtml :: [CMarkOption] -> Text -> Text
-commonmarkToHtml opts = commonmarkToX render_html opts Nothing
-  where render_html n o _ = c_cmark_render_html n o
+commonmarkToHtml :: [CMarkOption] -> [CMarkExtension] -> Text -> Text
+commonmarkToHtml opts exts =
+  commonmarkToX render_html opts exts Nothing
+  where exts' = Unsafe.unsafePerformIO $ fmap catMaybes $ mapM resolveExt exts
+        render_html n o _ = Unsafe.unsafePerformIO $ do
+          llist <- extsToLlist exts'
+          let r = c_cmark_render_html n o llist
+          freeLlist llist
+          return r
 
 -- | Convert CommonMark formatted text to CommonMark XML, using cmark's
 -- built-in renderer.
-commonmarkToXml :: [CMarkOption] -> Text -> Text
-commonmarkToXml opts = commonmarkToX render_xml opts Nothing
+commonmarkToXml :: [CMarkOption] -> [CMarkExtension] -> Text -> Text
+commonmarkToXml opts exts = commonmarkToX render_xml opts exts Nothing
   where render_xml n o _ = c_cmark_render_xml n o
 
 -- | Convert CommonMark formatted text to groff man, using cmark's
 -- built-in renderer.
-commonmarkToMan :: [CMarkOption] -> Maybe Int -> Text -> Text
+commonmarkToMan :: [CMarkOption] -> [CMarkExtension] -> Maybe Int -> Text -> Text
 commonmarkToMan = commonmarkToX c_cmark_render_man
 
 -- | Convert CommonMark formatted text to latex, using cmark's
 -- built-in renderer.
-commonmarkToLaTeX :: [CMarkOption] -> Maybe Int -> Text -> Text
+commonmarkToLaTeX :: [CMarkOption] -> [CMarkExtension] -> Maybe Int -> Text -> Text
 commonmarkToLaTeX = commonmarkToX c_cmark_render_latex
 
 -- | Convert CommonMark formatted text to a structured 'Node' tree,
 -- which can be transformed or rendered using Haskell code.
-commonmarkToNode :: [CMarkOption] -> Text -> Node
-commonmarkToNode opts s = Unsafe.unsafePerformIO $ do
-  nptr <- TF.withCStringLen s $! \(ptr, len) ->
-             c_cmark_parse_document ptr len (combineOptions opts)
+commonmarkToNode :: [CMarkOption] -> [CMarkExtension] -> Text -> Node
+commonmarkToNode opts exts s = Unsafe.unsafePerformIO $ do
+  exts' <- fmap catMaybes $ mapM resolveExt exts
+  parser <- c_cmark_parser_new (combineOptions opts)
+  mapM_ (c_cmark_parser_attach_syntax_extension parser) exts'
+  TF.withCStringLen s $! \(ptr, len) ->
+             c_cmark_parser_feed parser ptr len
+  nptr <- c_cmark_parser_finish parser
+  c_cmark_parser_free parser
   fptr <- newForeignPtr c_cmark_node_free nptr
   withForeignPtr fptr toNode
 
-nodeToHtml :: [CMarkOption] -> Node -> Text
-nodeToHtml opts = nodeToX render_html opts Nothing
-  where render_html n o _ = c_cmark_render_html n o
+nodeToHtml :: [CMarkOption] -> [CMarkExtension] -> Node -> Text
+nodeToHtml opts exts =
+  nodeToX render_html opts Nothing
+  where exts' = Unsafe.unsafePerformIO $ fmap catMaybes $ mapM resolveExt exts
+        render_html n o _ = Unsafe.unsafePerformIO $ do
+          llist <- extsToLlist exts'
+          let r = c_cmark_render_html n o llist
+          freeLlist llist
+          return r
 
 nodeToXml :: [CMarkOption] -> Node -> Text
 nodeToXml opts = nodeToX render_xml opts Nothing
@@ -106,20 +154,42 @@ nodeToX renderer opts mbWidth node = Unsafe.unsafePerformIO $ do
 
 commonmarkToX :: Renderer
               -> [CMarkOption]
+              -> [CMarkExtension]
               -> Maybe Int
               -> Text
               -> Text
-commonmarkToX renderer opts mbWidth s = Unsafe.unsafePerformIO $
+commonmarkToX renderer opts exts mbWidth s = Unsafe.unsafePerformIO $
   TF.withCStringLen s $ \(ptr, len) -> do
     let opts' = combineOptions opts
-    nptr <- c_cmark_parse_document ptr len opts'
+    exts' <- fmap catMaybes $ mapM resolveExt exts
+    parser <- c_cmark_parser_new opts'
+    mapM_ (c_cmark_parser_attach_syntax_extension parser) exts'
+    c_cmark_parser_feed parser ptr len
+    nptr <- c_cmark_parser_finish parser
+    c_cmark_parser_free parser
     fptr <- newForeignPtr c_cmark_node_free nptr
     withForeignPtr fptr $ \p -> do
       str <- renderer p opts' (fromMaybe 0 mbWidth)
       t <- TF.peekCStringLen $! (str, c_strlen str)
       return t
 
-type NodePtr = Ptr ()
+data ParserPhantom
+type ParserPtr = Ptr ParserPhantom
+
+data NodePhantom
+type NodePtr = Ptr NodePhantom
+
+data LlistPhantom a
+type LlistPtr a = Ptr (LlistPhantom a)
+
+data MemPhantom
+type MemPtr = Ptr MemPhantom
+
+data PluginPhantom
+type PluginPtr = Ptr PluginPhantom
+
+data ExtensionPhantom
+type ExtensionPtr = Ptr ExtensionPhantom
 
 data Node = Node (Maybe PosInfo) NodeType [Node]
      deriving (Show, Read, Eq, Ord, Typeable, Data, Generic)
@@ -153,6 +223,9 @@ type OnEnter = Text
 
 type OnExit = Text
 
+data TableCellAlignment = None | Left | Center | Right
+     deriving (Show, Read, Eq, Ord, Typeable, Data, Generic)
+
 data NodeType =
     DOCUMENT
   | THEMATIC_BREAK
@@ -174,6 +247,10 @@ data NodeType =
   | STRONG
   | LINK Url Title
   | IMAGE Url Title
+  | STRIKETHROUGH
+  | TABLE [TableCellAlignment]
+  | TABLE_ROW
+  | TABLE_CELL
   deriving (Show, Read, Eq, Ord, Typeable, Data, Generic)
 
 data PosInfo = PosInfo{ startLine   :: Int
@@ -197,10 +274,6 @@ optSourcePos = CMarkOption #const CMARK_OPT_SOURCEPOS
 optHardBreaks :: CMarkOption
 optHardBreaks = CMarkOption #const CMARK_OPT_HARDBREAKS
 
--- | Normalize the document by consolidating adjacent text nodes.
-optNormalize :: CMarkOption
-optNormalize = CMarkOption #const CMARK_OPT_NORMALIZE
-
 -- | Convert straight quotes to curly, @---@ to em-dash, @--@ to en-dash.
 optSmart :: CMarkOption
 optSmart = CMarkOption #const CMARK_OPT_SMART
@@ -209,6 +282,20 @@ optSmart = CMarkOption #const CMARK_OPT_SMART
 -- and images.
 optSafe :: CMarkOption
 optSafe = CMarkOption #const CMARK_OPT_SAFE
+
+newtype CMarkExtension = CMarkExtension { unCMarkExtension :: String }
+
+extStrikethrough :: CMarkExtension
+extStrikethrough = CMarkExtension "strikethrough"
+
+extTable :: CMarkExtension
+extTable = CMarkExtension "table"
+
+extAutolink :: CMarkExtension
+extAutolink = CMarkExtension "autolink"
+
+extTagfilter :: CMarkExtension
+extTagfilter = CMarkExtension "tagfilter"
 
 ptrToNodeType :: NodePtr -> IO NodeType
 ptrToNodeType ptr = do
@@ -255,7 +342,16 @@ ptrToNodeType ptr = do
          -> return SOFTBREAK
        #const CMARK_NODE_LINEBREAK
          -> return LINEBREAK
-       _ -> error "Unknown node type"
+       _ -> if nodeType == fromIntegral (Unsafe.unsafePerformIO $ peek c_CMARK_NODE_STRIKETHROUGH) then
+              return STRIKETHROUGH
+            else if nodeType == fromIntegral (Unsafe.unsafePerformIO $ peek c_CMARK_NODE_TABLE) then
+              TABLE <$> alignments
+            else if nodeType == fromIntegral (Unsafe.unsafePerformIO $ peek c_CMARK_NODE_TABLE_ROW) then
+              return TABLE_ROW
+            else if nodeType == fromIntegral (Unsafe.unsafePerformIO $ peek c_CMARK_NODE_TABLE_CELL) then
+              return TABLE_CELL
+            else
+              error $ "Unknown node type " ++ (show nodeType)
   where literal   = c_cmark_node_get_literal ptr >>= totext
         level     = c_cmark_node_get_heading_level ptr
         onEnter    = c_cmark_node_get_on_enter ptr >>= totext
@@ -280,6 +376,14 @@ ptrToNodeType ptr = do
         url       = c_cmark_node_get_url ptr >>= totext
         title     = c_cmark_node_get_title ptr >>= totext
         info      = c_cmark_node_get_fence_info ptr >>= totext
+        alignments = do
+          ncols <- c_cmarkextensions_get_table_columns ptr
+          cols <- c_cmarkextensions_get_table_alignments ptr
+          mapM (fmap ucharToAlignment . peekElemOff cols) [0..(fromIntegral ncols) - 1]
+        ucharToAlignment (CUChar 108) = CMarkGFM.Left
+        ucharToAlignment (CUChar 99)  = CMarkGFM.Center
+        ucharToAlignment (CUChar 114) = CMarkGFM.Right
+        ucharToAlignment _            = None
 
 getPosInfo :: NodePtr -> IO (Maybe PosInfo)
 getPosInfo ptr = do
@@ -376,6 +480,10 @@ fromNode (Node _ nodeType children) = do
                      return n
             SOFTBREAK   -> c_cmark_node_new (#const CMARK_NODE_SOFTBREAK)
             LINEBREAK   -> c_cmark_node_new (#const CMARK_NODE_LINEBREAK)
+            STRIKETHROUGH -> c_cmark_node_new (fromIntegral . Unsafe.unsafePerformIO $ peek c_CMARK_NODE_STRIKETHROUGH)
+            TABLE _       -> error "constructing table not supported"
+            TABLE_ROW     -> error "constructing table row not supported"
+            TABLE_CELL    -> error "constructing table cell not supported"
   mapM_ (\child -> fromNode child >>= c_cmark_node_append_child node) children
   return node
 
@@ -394,7 +502,7 @@ foreign import ccall "cmark.h cmark_node_new"
     c_cmark_node_new :: Int -> IO NodePtr
 
 foreign import ccall "cmark.h cmark_render_html"
-    c_cmark_render_html :: NodePtr -> CInt -> IO CString
+    c_cmark_render_html :: NodePtr -> CInt -> LlistPtr ExtensionPtr -> IO CString
 
 foreign import ccall "cmark.h cmark_render_xml"
     c_cmark_render_xml :: NodePtr -> CInt -> IO CString
@@ -408,8 +516,17 @@ foreign import ccall "cmark.h cmark_render_latex"
 foreign import ccall "cmark.h cmark_render_commonmark"
     c_cmark_render_commonmark :: NodePtr -> CInt -> Int -> IO CString
 
-foreign import ccall "cmark.h cmark_parse_document"
-    c_cmark_parse_document :: CString -> Int -> CInt -> IO NodePtr
+foreign import ccall "cmark.h cmark_parser_new"
+    c_cmark_parser_new :: CInt -> IO ParserPtr
+
+foreign import ccall "cmark.h cmark_parser_feed"
+    c_cmark_parser_feed :: ParserPtr -> CString -> Int -> IO ()
+
+foreign import ccall "cmark.h cmark_parser_finish"
+    c_cmark_parser_finish :: ParserPtr -> IO NodePtr
+
+foreign import ccall "cmark.h cmark_parser_free"
+    c_cmark_parser_free :: ParserPtr -> IO ()
 
 foreign import ccall "cmark.h cmark_node_get_type"
     c_cmark_node_get_type :: NodePtr -> IO Int
@@ -503,3 +620,42 @@ foreign import ccall "cmark.h cmark_node_set_on_exit"
 
 foreign import ccall "cmark.h &cmark_node_free"
     c_cmark_node_free :: FunPtr (NodePtr -> IO ())
+
+foreign import ccall "registry.h cmark_register_plugin"
+    c_cmark_register_plugin :: FunPtr (PluginPtr -> IO Int) -> IO ()
+
+foreign import ccall "core-extensions.h &core_extensions_registration"
+    c_core_extensions_registration :: FunPtr (PluginPtr -> IO Int)
+
+foreign import ccall "cmark_extension_api.h cmark_find_syntax_extension"
+    c_cmark_find_syntax_extension :: CString -> IO ExtensionPtr
+
+foreign import ccall "cmark.h cmark_llist_append"
+    c_cmark_llist_append :: MemPtr -> LlistPtr a -> Ptr () -> IO (LlistPtr a)
+
+foreign import ccall "cmark.h cmark_llist_free"
+    c_cmark_llist_free :: MemPtr -> LlistPtr a -> IO ()
+
+foreign import ccall "cmark.h &CMARK_DEFAULT_MEM_ALLOCATOR"
+    c_CMARK_DEFAULT_MEM_ALLOCATOR :: MemPtr
+
+foreign import ccall "cmark_extension_api.h cmark_parser_attach_syntax_extension"
+    c_cmark_parser_attach_syntax_extension :: ParserPtr -> ExtensionPtr -> IO ()
+
+foreign import ccall "strikethrough.h &CMARK_NODE_STRIKETHROUGH"
+    c_CMARK_NODE_STRIKETHROUGH :: Ptr CUShort
+
+foreign import ccall "table.h &CMARK_NODE_TABLE"
+    c_CMARK_NODE_TABLE :: Ptr CUShort
+
+foreign import ccall "table.h &CMARK_NODE_TABLE_ROW"
+    c_CMARK_NODE_TABLE_ROW :: Ptr CUShort
+
+foreign import ccall "table.h &CMARK_NODE_TABLE_CELL"
+    c_CMARK_NODE_TABLE_CELL :: Ptr CUShort
+
+foreign import ccall "core-extensions.h cmarkextensions_get_table_columns"
+    c_cmarkextensions_get_table_columns :: NodePtr -> IO CUShort
+
+foreign import ccall "core-extensions.h cmarkextensions_get_table_alignments"
+    c_cmarkextensions_get_table_alignments :: NodePtr -> IO (Ptr CUChar)

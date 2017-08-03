@@ -1,6 +1,6 @@
 import qualified Cheapskate as Cheapskate
 import qualified Cheapskate.Html as CheapskateHtml
-import qualified CMark as CMark
+import qualified CMarkGFM as CMarkGFM
 import qualified Text.Sundown.Html.Text as Sundown
 import qualified Text.Discount as Discount
 import qualified Text.Blaze.Html.Renderer.Text as Blaze
@@ -20,7 +20,7 @@ main = do
       mkBench "cheapskate" (T.concat . toChunks . Blaze.renderHtml . CheapskateHtml.renderDoc . Cheapskate.markdown Cheapskate.def) sample
     , mkBench "discount" (Discount.parseMarkdownUtf8 []) sample
     , mkBench "markdown" (T.concat . toChunks . Blaze.renderHtml . Markdown.markdown Markdown.def . fromChunks . (:[])) sample
-    , mkBench "cmark" (CMark.commonmarkToHtml []) sample
+    , mkBench "cmark" (CMarkGFM.commonmarkToHtml []) sample
      ]
 
 -- Note: when full-sample.md rather than sample.md is used markdown

@@ -21,5 +21,5 @@ test_script:
   # descriptor
   - echo "" | stack clean
   - echo "" | stack --no-terminal  test
-  - echo "" | stack --local-bin-path . install cmark
+  - echo "" | stack --local-bin-path . install cmark-gfm
 

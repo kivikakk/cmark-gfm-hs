@@ -1,9 +1,9 @@
-cmark-hs
-========
+cmark-gfm-hs
+============
 
-This package provides Haskell bindings for [libcmark], the reference
-parser for [CommonMark], a fully specified variant of Markdown.
-It includes sources for [libcmark] and does not require prior
+This package provides Haskell bindings for [libcmark-gfm], the reference
+parser for [GitHub Flavored Markdown], a fully specified variant of Markdown.
+It includes sources for [libcmark-gfm] and does not require prior
 installation of the C library.
 
 cmark provides the following advantages over existing Markdown
@@ -26,7 +26,7 @@ libraries for Haskell:
     without the exponential blowups in parsing time that sometimes afflict
     other libraries.  (The input `bench/full-sample.md`,
     for example, causes both [pandoc] and [markdown] to grind to a
-    halt.)  [libcmark] has been extensively fuzz-tested.
+    halt.)  [libcmark-gfm] has been extensively fuzz-tested.
 
   - **Accuracy:**  cmark passes the CommonMark spec's suite of over
     600 conformance tests.
@@ -44,7 +44,7 @@ libraries for Haskell:
   - **Ease of installation:** cmark is portable and has minimal
     dependencies.
 
-cmark does not provide Haskell versions of the whole [libcmark]
+cmark does not provide Haskell versions of the whole [libcmark-gfm]
 API, which is built around mutable `cmark_node` objects.  Instead, it
 provides functions for converting CommonMark to HTML (and other
 formats), and a function for converting CommonMark to a `Node`
@@ -58,8 +58,8 @@ dangerous URLs.
 **A note on stability:**  There is a good chance the API will change
 significantly after this early release.
 
-[CommonMark]: http://commonmark.org
-[libcmark]: http://github.com/jgm/cmark
+[GitHub Flavored Markdown]: https://github.github.com/gfm/
+[libcmark-gfm]: http://github.com/github/cmark
 [benchmarks]: https://github.com/jgm/cmark/blob/master/benchmarks.md
 [cheapskate]: https://hackage.haskell.org/package/cheapskate
 [pandoc]: https://hackage.haskell.org/package/pandoc

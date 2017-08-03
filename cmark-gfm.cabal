@@ -1,20 +1,20 @@
-name:                cmark
-version:             0.5.6
-synopsis:            Fast, accurate CommonMark (Markdown) parser and renderer
+name:                cmark-gfm
+version:             0.1.0
+synopsis:            Fast, accurate GitHub Flavored Markdown parser and renderer
 description:
   This package provides Haskell bindings for
-  <https://github.com/jgm/cmark libcmark>, the reference
-  parser for <http://commonmark.org CommonMark>, a fully
+  <https://github.com/github/cmark libcmark-gfm>, the reference
+  parser for <https://github.github.com/gfm/ GitHub Flavored Markdown>, a fully
   specified variant of Markdown. It includes sources for
-  libcmark (0.28.0) and does not require prior installation of the
+  libcmark-gfm (0.28.0) and does not require prior installation of the
   C library.
 
-homepage:            https://github.com/jgm/cmark-hs
+homepage:            https://github.com/kivikakk/cmark-gfm-hs
 license:             BSD3
 license-file:        LICENSE
-author:              John MacFarlane
-maintainer:          jgm@berkeley.edu
-copyright:           (C) 2015--17 John MacFarlane
+author:              Yuki Izumi
+maintainer:          kivikakk@github.com
+copyright:           (C) 2015--17 John MacFarlane, (C) 2017 Yuki Izumi
 category:            Text
 tested-with:         GHC == 7.4.2, GHC == 7.6.3, GHC == 7.8.2, GHC == 7.10.3
 build-type:          Simple
@@ -40,20 +40,32 @@ extra-source-files:  README.md
                      cbits/scanners.h
                      cbits/case_fold_switch.inc
                      cbits/entities.inc
+                     cbits/cmark_extension_api.h
+                     cbits/html.h
+                     cbits/plugin.h
+                     cbits/registry.h
+                     cbits/syntax_extension.h
+                     cbits/autolink.h
+                     cbits/core-extensions.h
+                     cbits/ext_scanners.h
+                     cbits/strikethrough.h
+                     cbits/table.h
+                     cbits/tagfilter.h
+                     cbits/cmarkextensions_export.h
                      bench/sample.md
                      bench/full-sample.md
 cabal-version:       >=1.14
 
 Source-repository head
   type:              git
-  location:          git://github.com/jgm/cmark-hs.git
+  location:          git://github.com/kivikakk/cmark-gfm-hs.git
 
 flag pkgconfig
   default:     False
-  description: Use system libcmark via pkgconfig
+  description: Use system libcmark-gfm via pkgconfig
 
 library
-  exposed-modules:     CMark
+  exposed-modules:     CMarkGFM
   build-depends:       base >=4.5 && < 5.0,
                        text >= 1.0 && < 1.3,
                        bytestring
@@ -62,7 +74,7 @@ library
   default-language:    Haskell2010
   ghc-options:         -Wall -fno-warn-unused-do-bind
   if flag(pkgconfig)
-    pkgconfig-depends: libcmark
+    pkgconfig-depends: libcmark-gfm
   else
     cc-options:        -Wall -std=c99
     Include-dirs:      cbits
@@ -86,12 +98,24 @@ library
                        cbits/latex.c
                        cbits/xml.c
                        cbits/render.c
+                       cbits/arena.c
+                       cbits/linked_list.c
+                       cbits/plaintext.c
+                       cbits/plugin.c
+                       cbits/registry.c
+                       cbits/syntax_extension.c
+                       cbits/autolink.c
+                       cbits/core-extensions.c
+                       cbits/ext_scanners.c
+                       cbits/strikethrough.c
+                       cbits/table.c
+                       cbits/tagfilter.c
 
-benchmark bench-cmark
+benchmark bench-cmark-gfm
   type:             exitcode-stdio-1.0
   hs-source-dirs:   bench
   main-is:          bench-cmark.hs
-  build-depends:    base, text, cmark, criterion,
+  build-depends:    base, text, cmark-gfm, criterion,
                     sundown >= 0.6 && < 0.7,
                     cheapskate >= 0.1 && < 0.2,
                     markdown >= 0.1 && < 0.2,
@@ -100,10 +124,10 @@ benchmark bench-cmark
   ghc-options:      -O2
   default-language: Haskell2010
 
-Test-Suite test-cmark
+Test-Suite test-cmark-gfm
   type:           exitcode-stdio-1.0
   main-is:        test-cmark.hs
   hs-source-dirs: test
-  build-depends:  base, cmark, text, HUnit >= 1.2 && < 1.7
+  build-depends:  base, cmark-gfm, text, HUnit >= 1.2 && < 1.7
   ghc-options:    -Wall -fno-warn-unused-do-bind -threaded
   default-language: Haskell98
