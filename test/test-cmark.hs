@@ -7,7 +7,6 @@ import Data.Text ()
 
 main :: IO ()
 main = do
-  registerPlugins
   counts' <- runTestTT tests
   case (errors counts' + failures counts') of
        0 -> exitWith ExitSuccess

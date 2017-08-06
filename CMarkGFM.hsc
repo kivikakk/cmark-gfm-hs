@@ -7,7 +7,6 @@ module CMarkGFM (
   , commonmarkToMan
   , commonmarkToLaTeX
   , commonmarkToNode
-  , registerPlugins
   , nodeToHtml
   , nodeToXml
   , nodeToMan
@@ -54,9 +53,9 @@ import Control.Applicative ((<$>), (<*>))
 #include <cmark.h>
 #include <core-extensions.h>
 
--- | Register core extensions.  This should be done once at program start.
-registerPlugins :: IO ()
-registerPlugins = c_cmark_register_plugin c_core_extensions_registration
+-- | Register core extensions.
+registerPlugins :: ()
+registerPlugins = Unsafe.unsafePerformIO $ c_cmark_register_plugin c_core_extensions_registration
 
 -- | Frees a cmark linked list, produced by extsToLlist.
 freeLlist :: LlistPtr a -> IO ()
@@ -73,7 +72,7 @@ extsToLlist (h:t) = do
 
 -- | Resolves a CMarkExtension to its pointer.
 resolveExt :: CMarkExtension -> IO (Maybe ExtensionPtr)
-resolveExt e = do
+resolveExt e = registerPlugins `seq` do
   p <- withCString (unCMarkExtension e) c_cmark_find_syntax_extension
   return (if p == nullPtr then Nothing else Just p)
 
