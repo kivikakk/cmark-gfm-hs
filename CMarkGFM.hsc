@@ -223,7 +223,7 @@ type OnEnter = Text
 
 type OnExit = Text
 
-data TableCellAlignment = None | Left | Center | Right
+data TableCellAlignment = NoAlignment | LeftAligned | CenterAligned | RightAligned
      deriving (Show, Read, Eq, Ord, Typeable, Data, Generic)
 
 data NodeType =
@@ -380,10 +380,10 @@ ptrToNodeType ptr = do
           ncols <- c_cmarkextensions_get_table_columns ptr
           cols <- c_cmarkextensions_get_table_alignments ptr
           mapM (fmap ucharToAlignment . peekElemOff cols) [0..(fromIntegral ncols) - 1]
-        ucharToAlignment (CUChar 108) = CMarkGFM.Left
-        ucharToAlignment (CUChar 99)  = CMarkGFM.Center
-        ucharToAlignment (CUChar 114) = CMarkGFM.Right
-        ucharToAlignment _            = None
+        ucharToAlignment (CUChar 108) = LeftAligned
+        ucharToAlignment (CUChar 99)  = CenterAligned
+        ucharToAlignment (CUChar 114) = RightAligned
+        ucharToAlignment _            = NoAlignment
 
 getPosInfo :: NodePtr -> IO (Maybe PosInfo)
 getPosInfo ptr = do
