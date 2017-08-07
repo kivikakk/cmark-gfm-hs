@@ -86,9 +86,9 @@ commonmarkToHtml :: [CMarkOption] -> [CMarkExtension] -> Text -> Text
 commonmarkToHtml opts exts =
   commonmarkToX render_html opts exts Nothing
   where exts' = Unsafe.unsafePerformIO $ resolveExts exts
-        render_html n o _ = Unsafe.unsafePerformIO $ do
+        render_html n o _ = do
           llist <- extsToLlist exts'
-          let r = c_cmark_render_html n o llist
+          r <- c_cmark_render_html n o llist
           freeLlist llist
           return r
 
@@ -126,9 +126,9 @@ nodeToHtml :: [CMarkOption] -> [CMarkExtension] -> Node -> Text
 nodeToHtml opts exts =
   nodeToX render_html opts Nothing
   where exts' = Unsafe.unsafePerformIO $ resolveExts exts
-        render_html n o _ = Unsafe.unsafePerformIO $ do
+        render_html n o _ = do
           llist <- extsToLlist exts'
-          let r = c_cmark_render_html n o llist
+          r <- c_cmark_render_html n o llist
           freeLlist llist
           return r
 
