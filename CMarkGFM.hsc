@@ -7,7 +7,6 @@ module CMarkGFM (
   , commonmarkToMan
   , commonmarkToLaTeX
   , commonmarkToNode
-  , registerPlugins
   , nodeToHtml
   , nodeToXml
   , nodeToMan
@@ -42,7 +41,6 @@ import Foreign.C.String (CString, withCString)
 import qualified System.IO.Unsafe as Unsafe
 import Data.Maybe (fromMaybe)
 import GHC.Generics (Generic)
-import Data.Maybe (catMaybes)
 import Data.Data (Data)
 import Data.Typeable (Typeable)
 import Data.Text (Text, empty)
@@ -54,9 +52,9 @@ import Control.Applicative ((<$>), (<*>))
 #include <cmark.h>
 #include <core-extensions.h>
 
--- | Register core extensions.  This should be done once at program start.
-registerPlugins :: IO ()
-registerPlugins = c_cmark_register_plugin c_core_extensions_registration
+-- | Ensure core extensions are registered.
+ensurePluginsRegistered :: IO ()
+ensurePluginsRegistered = c_core_extensions_ensure_registered
 
 -- | Frees a cmark linked list, produced by extsToLlist.
 freeLlist :: LlistPtr a -> IO ()
@@ -71,21 +69,26 @@ extsToLlist (h:t) = do
   t' <- extsToLlist t
   c_cmark_llist_append c_CMARK_DEFAULT_MEM_ALLOCATOR t' (castPtr h)
 
--- | Resolves a CMarkExtension to its pointer.
-resolveExt :: CMarkExtension -> IO (Maybe ExtensionPtr)
-resolveExt e = do
-  p <- withCString (unCMarkExtension e) c_cmark_find_syntax_extension
-  return (if p == nullPtr then Nothing else Just p)
+-- | Resolves CMarkExtensions to pointers.
+resolveExts :: [CMarkExtension] -> IO [ExtensionPtr]
+resolveExts exts = do
+  ensurePluginsRegistered
+  mapM resolveExt exts
+  where resolveExt ext = do p <- withCString (unCMarkExtension ext) c_cmark_find_syntax_extension
+                            if p == nullPtr then
+                              fail $ "could not load extension " ++ unCMarkExtension ext
+                            else
+                              return p
 
 -- | Convert CommonMark formatted text to Html, using cmark's
 -- built-in renderer.
 commonmarkToHtml :: [CMarkOption] -> [CMarkExtension] -> Text -> Text
 commonmarkToHtml opts exts =
   commonmarkToX render_html opts exts Nothing
-  where exts' = Unsafe.unsafePerformIO $ fmap catMaybes $ mapM resolveExt exts
-        render_html n o _ = Unsafe.unsafePerformIO $ do
+  where exts' = Unsafe.unsafePerformIO $ resolveExts exts
+        render_html n o _ = do
           llist <- extsToLlist exts'
-          let r = c_cmark_render_html n o llist
+          r <- c_cmark_render_html n o llist
           freeLlist llist
           return r
 
@@ -109,7 +112,7 @@ commonmarkToLaTeX = commonmarkToX c_cmark_render_latex
 -- which can be transformed or rendered using Haskell code.
 commonmarkToNode :: [CMarkOption] -> [CMarkExtension] -> Text -> Node
 commonmarkToNode opts exts s = Unsafe.unsafePerformIO $ do
-  exts' <- fmap catMaybes $ mapM resolveExt exts
+  exts' <- resolveExts exts
   parser <- c_cmark_parser_new (combineOptions opts)
   mapM_ (c_cmark_parser_attach_syntax_extension parser) exts'
   TF.withCStringLen s $! \(ptr, len) ->
@@ -122,10 +125,10 @@ commonmarkToNode opts exts s = Unsafe.unsafePerformIO $ do
 nodeToHtml :: [CMarkOption] -> [CMarkExtension] -> Node -> Text
 nodeToHtml opts exts =
   nodeToX render_html opts Nothing
-  where exts' = Unsafe.unsafePerformIO $ fmap catMaybes $ mapM resolveExt exts
-        render_html n o _ = Unsafe.unsafePerformIO $ do
+  where exts' = Unsafe.unsafePerformIO $ resolveExts exts
+        render_html n o _ = do
           llist <- extsToLlist exts'
-          let r = c_cmark_render_html n o llist
+          r <- c_cmark_render_html n o llist
           freeLlist llist
           return r
 
@@ -161,7 +164,7 @@ commonmarkToX :: Renderer
 commonmarkToX renderer opts exts mbWidth s = Unsafe.unsafePerformIO $
   TF.withCStringLen s $ \(ptr, len) -> do
     let opts' = combineOptions opts
-    exts' <- fmap catMaybes $ mapM resolveExt exts
+    exts' <- resolveExts exts
     parser <- c_cmark_parser_new opts'
     mapM_ (c_cmark_parser_attach_syntax_extension parser) exts'
     c_cmark_parser_feed parser ptr len
@@ -184,9 +187,6 @@ type LlistPtr a = Ptr (LlistPhantom a)
 
 data MemPhantom
 type MemPtr = Ptr MemPhantom
-
-data PluginPhantom
-type PluginPtr = Ptr PluginPhantom
 
 data ExtensionPhantom
 type ExtensionPtr = Ptr ExtensionPhantom
@@ -223,7 +223,7 @@ type OnEnter = Text
 
 type OnExit = Text
 
-data TableCellAlignment = None | Left | Center | Right
+data TableCellAlignment = NoAlignment | LeftAligned | CenterAligned | RightAligned
      deriving (Show, Read, Eq, Ord, Typeable, Data, Generic)
 
 data NodeType =
@@ -380,10 +380,10 @@ ptrToNodeType ptr = do
           ncols <- c_cmarkextensions_get_table_columns ptr
           cols <- c_cmarkextensions_get_table_alignments ptr
           mapM (fmap ucharToAlignment . peekElemOff cols) [0..(fromIntegral ncols) - 1]
-        ucharToAlignment (CUChar 108) = CMarkGFM.Left
-        ucharToAlignment (CUChar 99)  = CMarkGFM.Center
-        ucharToAlignment (CUChar 114) = CMarkGFM.Right
-        ucharToAlignment _            = None
+        ucharToAlignment (CUChar 108) = LeftAligned
+        ucharToAlignment (CUChar 99)  = CenterAligned
+        ucharToAlignment (CUChar 114) = RightAligned
+        ucharToAlignment _            = NoAlignment
 
 getPosInfo :: NodePtr -> IO (Maybe PosInfo)
 getPosInfo ptr = do
@@ -621,11 +621,8 @@ foreign import ccall "cmark.h cmark_node_set_on_exit"
 foreign import ccall "cmark.h &cmark_node_free"
     c_cmark_node_free :: FunPtr (NodePtr -> IO ())
 
-foreign import ccall "registry.h cmark_register_plugin"
-    c_cmark_register_plugin :: FunPtr (PluginPtr -> IO Int) -> IO ()
-
-foreign import ccall "core-extensions.h &core_extensions_registration"
-    c_core_extensions_registration :: FunPtr (PluginPtr -> IO Int)
+foreign import ccall "core-extensions.h core_extensions_ensure_registered"
+    c_core_extensions_ensure_registered :: IO ()
 
 foreign import ccall "cmark_extension_api.h cmark_find_syntax_extension"
     c_cmark_find_syntax_extension :: CString -> IO ExtensionPtr

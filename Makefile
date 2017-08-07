@@ -36,4 +36,7 @@ cbits/cmark_version.h: $(CMARK_DIR)/build/src/cmark_version.h
 cbits/%: $(CMARK_DIR)/src/%
 	cp $< $@
 
+cbits/%: $(CMARK_DIR)/extensions/%
+	cp $< $@
+
 .PHONY: build prep install test clean bench update-cmark
