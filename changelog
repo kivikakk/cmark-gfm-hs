@@ -1,3 +1,18 @@
+cmark-gfm 0.1.2 (09 Aug 2017)
+
+  * Update to cmark-gfm 0.28.0.gfm.5.
+
+cmark-gfm 0.1.1 (03 Aug 2017)
+
+  * Automatically register plugins.
+  * Rename alignment values to not clash with `None`, `Left`.
+  * Fix a potential use-after-free.
+
+cmark-gfm 0.1.0 (03 Aug 2017)
+
+  * Update to cmark-gfm (between revisions).
+  * Add extension support.
+
 cmark 0.5.5.1 (02 Aug 2017)
 
   * Update to cmark 0.28.0.
