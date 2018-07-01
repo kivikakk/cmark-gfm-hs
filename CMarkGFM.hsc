@@ -640,16 +640,16 @@ foreign import ccall "cmark_extension_api.h cmark_parser_attach_syntax_extension
     c_cmark_parser_attach_syntax_extension :: ParserPtr -> ExtensionPtr -> IO ()
 
 foreign import ccall "strikethrough.h &CMARK_NODE_STRIKETHROUGH"
-    c_CMARK_NODE_STRIKETHROUGH :: Ptr CUShort
+    c_CMARK_NODE_STRIKETHROUGH :: Ptr #type cmark_node_type
 
 foreign import ccall "table.h &CMARK_NODE_TABLE"
-    c_CMARK_NODE_TABLE :: Ptr CUShort
+    c_CMARK_NODE_TABLE :: Ptr #type cmark_node_type
 
 foreign import ccall "table.h &CMARK_NODE_TABLE_ROW"
-    c_CMARK_NODE_TABLE_ROW :: Ptr CUShort
+    c_CMARK_NODE_TABLE_ROW :: Ptr #type cmark_node_type
 
 foreign import ccall "table.h &CMARK_NODE_TABLE_CELL"
-    c_CMARK_NODE_TABLE_CELL :: Ptr CUShort
+    c_CMARK_NODE_TABLE_CELL :: Ptr #type cmark_node_type
 
 foreign import ccall "core-extensions.h cmarkextensions_get_table_columns"
     c_cmarkextensions_get_table_columns :: NodePtr -> IO CUShort
