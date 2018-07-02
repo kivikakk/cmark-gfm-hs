@@ -20,7 +20,7 @@ main = do
       mkBench "cheapskate" (T.concat . toChunks . Blaze.renderHtml . CheapskateHtml.renderDoc . Cheapskate.markdown Cheapskate.def) sample
     , mkBench "discount" (Discount.parseMarkdownUtf8 []) sample
     , mkBench "markdown" (T.concat . toChunks . Blaze.renderHtml . Markdown.markdown Markdown.def . fromChunks . (:[])) sample
-    , mkBench "cmark" (CMarkGFM.commonmarkToHtml []) sample
+    , mkBench "cmark" (CMarkGFM.commonmarkToHtml [] []) sample
      ]
 
 -- Note: when full-sample.md rather than sample.md is used markdown
