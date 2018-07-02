@@ -12,9 +12,9 @@ description:
 homepage:            https://github.com/kivikakk/cmark-gfm-hs
 license:             BSD3
 license-file:        LICENSE
-author:              Yuki Izumi
+author:              Ashe Connor
 maintainer:          kivikakk@github.com
-copyright:           (C) 2015--17 John MacFarlane, (C) 2017 Yuki Izumi
+copyright:           (C) 2015--17 John MacFarlane, (C) 2017 Ashe Connor
 category:            Text
 tested-with:         GHC == 7.4.2, GHC == 7.6.3, GHC == 7.8.2, GHC == 7.10.3
 build-type:          Simple
