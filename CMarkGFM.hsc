@@ -58,7 +58,7 @@ ensurePluginsRegistered = c_core_extensions_ensure_registered
 
 -- | Frees a cmark linked list, produced by extsToLlist.
 freeLlist :: LlistPtr a -> IO ()
-freeLlist = c_cmark_llist_free c_CMARK_DEFAULT_MEM_ALLOCATOR
+freeLlist = c_cmark_llist_free c_cmark_mem
 
 -- | Converts a list of resolved extension pointers to a single cmark
 -- linked list, which can be passed to functions requiring a list of
@@ -67,7 +67,7 @@ extsToLlist :: [ExtensionPtr] -> IO (LlistPtr ExtensionPtr)
 extsToLlist [] = return nullPtr
 extsToLlist (h:t) = do
   t' <- extsToLlist t
-  c_cmark_llist_append c_CMARK_DEFAULT_MEM_ALLOCATOR t' (castPtr h)
+  c_cmark_llist_append c_cmark_mem t' (castPtr h)
 
 -- | Resolves CMarkExtensions to pointers.
 resolveExts :: [CMarkExtension] -> IO [ExtensionPtr]
@@ -633,8 +633,8 @@ foreign import ccall "cmark.h cmark_llist_append"
 foreign import ccall "cmark.h cmark_llist_free"
     c_cmark_llist_free :: MemPtr -> LlistPtr a -> IO ()
 
-foreign import ccall "cmark.h &CMARK_DEFAULT_MEM_ALLOCATOR"
-    c_CMARK_DEFAULT_MEM_ALLOCATOR :: MemPtr
+foreign import ccall "cmark.h cmark_get_default_mem_allocator"
+    c_cmark_mem :: MemPtr
 
 foreign import ccall "cmark_extension_api.h cmark_parser_attach_syntax_extension"
     c_cmark_parser_attach_syntax_extension :: ParserPtr -> ExtensionPtr -> IO ()
