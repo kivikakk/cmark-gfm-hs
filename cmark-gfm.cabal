@@ -21,15 +21,15 @@ build-type:          Simple
 extra-source-files:  README.md
                      changelog
                      cbits/chunk.h
-                     cbits/cmark_export.h
+                     cbits/cmark-gfm_export.h
                      cbits/debug.h
                      cbits/inlines.h
-                     cbits/cmark.h
+                     cbits/cmark-gfm.h
                      cbits/houdini.h
                      cbits/references.h
                      cbits/utf8.h
                      cbits/parser.h
-                     cbits/cmark_version.h
+                     cbits/cmark-gfm_version.h
                      cbits/html_unescape.h
                      cbits/iterator.h
                      cbits/node.h
@@ -40,18 +40,20 @@ extra-source-files:  README.md
                      cbits/scanners.h
                      cbits/case_fold_switch.inc
                      cbits/entities.inc
-                     cbits/cmark_extension_api.h
+                     cbits/cmark-gfm-extension_api.h
                      cbits/html.h
                      cbits/plugin.h
                      cbits/registry.h
                      cbits/syntax_extension.h
                      cbits/autolink.h
-                     cbits/core-extensions.h
+                     cbits/cmark-gfm-core-extensions.h
                      cbits/ext_scanners.h
                      cbits/strikethrough.h
                      cbits/table.h
                      cbits/tagfilter.h
-                     cbits/cmarkextensions_export.h
+                     cbits/cmark-gfm-extensions_export.h
+                     cbits/map.h
+                     cbits/footnotes.h
                      bench/sample.md
                      bench/full-sample.md
 cabal-version:       >=1.14
@@ -78,7 +80,7 @@ library
   else
     cc-options:        -Wall -std=c99
     Include-dirs:      cbits
-    Includes:          cmark.h
+    Includes:          cmark-gfm.h
     c-sources:         cbits/houdini_html_u.c
                        cbits/references.c
                        cbits/utf8.c
@@ -110,6 +112,8 @@ library
                        cbits/strikethrough.c
                        cbits/table.c
                        cbits/tagfilter.c
+                       cbits/footnotes.c
+                       cbits/map.c
 
 benchmark bench-cmark-gfm
   type:             exitcode-stdio-1.0

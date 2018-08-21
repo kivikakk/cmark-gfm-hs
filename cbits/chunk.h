@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "cmark.h"
+#include "cmark-gfm.h"
 #include "buffer.h"
 #include "memory.h"
 #include "cmark_ctype.h"
@@ -12,7 +12,7 @@
 #define CMARK_CHUNK_EMPTY                                                      \
   { NULL, 0, 0 }
 
-typedef struct {
+typedef struct cmark_chunk {
   unsigned char *data;
   bufsize_t len;
   bufsize_t alloc; // also implies a NULL-terminated string

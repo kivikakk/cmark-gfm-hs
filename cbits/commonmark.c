@@ -5,7 +5,7 @@
 #include <assert.h>
 
 #include "config.h"
-#include "cmark.h"
+#include "cmark-gfm.h"
 #include "node.h"
 #include "buffer.h"
 #include "utf8.h"
@@ -35,7 +35,7 @@ static CMARK_INLINE void outc(cmark_renderer *renderer, cmark_node *node,
       c < 0x80 && escape != LITERAL &&
       ((escape == NORMAL &&
         (c == '*' || c == '_' || c == '[' || c == ']' || c == '#' || c == '<' ||
-         c == '>' || c == '\\' || c == '`' || c == '!' ||
+         c == '>' || c == '\\' || c == '`' || c == '~' || c == '!' ||
          (c == '&' && cmark_isalpha(nextc)) || (c == '!' && nextc == '[') ||
          (renderer->begin_content && (c == '-' || c == '+' || c == '=') &&
           // begin_content doesn't get set to false til we've passed digits
@@ -460,6 +460,29 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
         LIT("\"");
       }
       LIT(")");
+    }
+    break;
+
+  case CMARK_NODE_FOOTNOTE_REFERENCE:
+    if (entering) {
+      LIT("[^");
+      OUT(cmark_chunk_to_cstr(renderer->mem, &node->as.literal), false, LITERAL);
+      LIT("]");
+    }
+    break;
+
+  case CMARK_NODE_FOOTNOTE_DEFINITION:
+    if (entering) {
+      renderer->footnote_ix += 1;
+      LIT("[^");
+      char n[32];
+      snprintf(n, sizeof(n), "%d", renderer->footnote_ix);
+      OUT(n, false, LITERAL);
+      LIT("]:\n");
+
+      cmark_strbuf_puts(renderer->prefix, "    ");
+    } else {
+      cmark_strbuf_truncate(renderer->prefix, renderer->prefix->size - 4);
     }
     break;
 

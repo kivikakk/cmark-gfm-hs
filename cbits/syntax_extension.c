@@ -1,6 +1,7 @@
 #include <stdlib.h>
+#include <assert.h>
 
-#include "cmark.h"
+#include "cmark-gfm.h"
 #include "syntax_extension.h"
 #include "buffer.h"
 
@@ -34,6 +35,11 @@ cmark_node_type cmark_syntax_extension_add_node(int is_inline) {
   }
 
   return *ref = (cmark_node_type) ((int) *ref + 1);
+}
+
+void cmark_syntax_extension_set_emphasis(cmark_syntax_extension *extension,
+                                         int emphasis) {
+  extension->emphasis = emphasis == 1;
 }
 
 void cmark_syntax_extension_set_open_block_func(cmark_syntax_extension *extension,

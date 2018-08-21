@@ -1,8 +1,9 @@
 #ifndef CMARK_SYNTAX_EXTENSION_H
 #define CMARK_SYNTAX_EXTENSION_H
 
-#include "cmark.h"
-#include "cmark_extension_api.h"
+#include "cmark-gfm.h"
+#include "cmark-gfm-extension_api.h"
+#include "config.h"
 
 struct cmark_syntax_extension {
   cmark_match_block_func          last_block_matches;
@@ -12,6 +13,7 @@ struct cmark_syntax_extension {
   cmark_llist                   * special_inline_chars;
   char                          * name;
   void                          * priv;
+  bool                            emphasis;
   cmark_free_func                 free_function;
   cmark_get_type_string_func      get_type_string_func;
   cmark_can_contain_func          can_contain_func;
