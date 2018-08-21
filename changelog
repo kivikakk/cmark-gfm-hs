@@ -1,6 +1,7 @@
 cmark-gfm 0.1.5 (21 Aug 2018)
 
   * Update to cmark-gfm 0.28.3.gfm.15.
+  * Fix build with system cmark-gfm (Felix Yan, #9).
 
 cmark-gfm 0.1.4 (2 Jul 2018)
 
