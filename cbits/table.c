@@ -1,9 +1,10 @@
-#include <cmark_extension_api.h>
+#include <cmark-gfm-extension_api.h>
 #include <html.h>
 #include <inlines.h>
 #include <parser.h>
 #include <references.h>
 #include <string.h>
+#include <render.h>
 
 #include "ext_scanners.h"
 #include "strikethrough.h"
@@ -541,6 +542,18 @@ static void man_render(cmark_syntax_extension *extension,
   }
 }
 
+static void html_table_add_align(cmark_strbuf* html, const char* align, int options) {
+  if (options & CMARK_OPT_TABLE_PREFER_STYLE_ATTRIBUTES) {
+    cmark_strbuf_puts(html, " style=\"text-align: ");
+    cmark_strbuf_puts(html, align);
+    cmark_strbuf_puts(html, "\"");
+  } else {
+    cmark_strbuf_puts(html, " align=\"");
+    cmark_strbuf_puts(html, align);
+    cmark_strbuf_puts(html, "\"");
+  }
+}
+
 struct html_table_state {
   unsigned need_closing_table_body : 1;
   unsigned in_table_header : 1;
@@ -565,10 +578,15 @@ static void html_render(cmark_syntax_extension *extension,
       cmark_strbuf_putc(html, '>');
       table_state->need_closing_table_body = false;
     } else {
-      if (table_state->need_closing_table_body)
+      if (table_state->need_closing_table_body) {
+        cmark_html_render_cr(html);
         cmark_strbuf_puts(html, "</tbody>");
+        cmark_html_render_cr(html);
+      }
       table_state->need_closing_table_body = false;
-      cmark_strbuf_puts(html, "</table>\n");
+      cmark_html_render_cr(html);
+      cmark_strbuf_puts(html, "</table>");
+      cmark_html_render_cr(html);
     }
   } else if (node->type == CMARK_NODE_TABLE_ROW) {
     if (entering) {
@@ -577,6 +595,10 @@ static void html_render(cmark_syntax_extension *extension,
         table_state->in_table_header = 1;
         cmark_strbuf_puts(html, "<thead>");
         cmark_html_render_cr(html);
+      } else if (!table_state->need_closing_table_body) {
+        cmark_strbuf_puts(html, "<tbody>");
+        cmark_html_render_cr(html);
+        table_state->need_closing_table_body = 1;
       }
       cmark_strbuf_puts(html, "<tr");
       cmark_html_render_sourcepos(node, html, options);
@@ -587,9 +609,6 @@ static void html_render(cmark_syntax_extension *extension,
       if (((node_table_row *)node->as.opaque)->is_header) {
         cmark_html_render_cr(html);
         cmark_strbuf_puts(html, "</thead>");
-        cmark_html_render_cr(html);
-        cmark_strbuf_puts(html, "<tbody>");
-        table_state->need_closing_table_body = 1;
         table_state->in_table_header = false;
       }
     }
@@ -609,9 +628,9 @@ static void html_render(cmark_syntax_extension *extension,
           break;
 
       switch (alignments[i]) {
-      case 'l': cmark_strbuf_puts(html, " align=\"left\""); break;
-      case 'c': cmark_strbuf_puts(html, " align=\"center\""); break;
-      case 'r': cmark_strbuf_puts(html, " align=\"right\""); break;
+      case 'l': html_table_add_align(html, "left", options); break;
+      case 'c': html_table_add_align(html, "center", options); break;
+      case 'r': html_table_add_align(html, "right", options); break;
       }
 
       cmark_html_render_sourcepos(node, html, options);
@@ -666,14 +685,14 @@ cmark_syntax_extension *create_table_extension(void) {
   return self;
 }
 
-uint16_t cmarkextensions_get_table_columns(cmark_node *node) {
+uint16_t cmark_gfm_extensions_get_table_columns(cmark_node *node) {
   if (node->type != CMARK_NODE_TABLE)
     return 0;
 
   return ((node_table *)node->as.opaque)->n_columns;
 }
 
-uint8_t *cmarkextensions_get_table_alignments(cmark_node *node) {
+uint8_t *cmark_gfm_extensions_get_table_alignments(cmark_node *node) {
   if (node->type != CMARK_NODE_TABLE)
     return 0;
 

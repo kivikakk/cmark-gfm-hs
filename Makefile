@@ -27,10 +27,13 @@ update-c-sources: $(C_SOURCES)
 cbits/config.h: $(CMARK_DIR)/build/src/config.h
 	cp $< $@
 
-cbits/cmark_export.h: $(CMARK_DIR)/build/src/cmark_export.h
+cbits/cmark-gfm_export.h: $(CMARK_DIR)/build/src/cmark-gfm_export.h
 	cp $< $@
 
-cbits/cmark_version.h: $(CMARK_DIR)/build/src/cmark_version.h
+cbits/cmark-gfm_version.h: $(CMARK_DIR)/build/src/cmark-gfm_version.h
+	cp $< $@
+
+cbits/cmark-gfm-extensions_export.h: $(CMARK_DIR)/build/extensions/cmark-gfm-extensions_export.h
 	cp $< $@
 
 cbits/%: $(CMARK_DIR)/src/%
@@ -39,4 +42,4 @@ cbits/%: $(CMARK_DIR)/src/%
 cbits/%: $(CMARK_DIR)/extensions/%
 	cp $< $@
 
-.PHONY: build prep install test clean bench update-cmark
+.PHONY: build prep install test clean bench update-c-sources

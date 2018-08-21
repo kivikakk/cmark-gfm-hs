@@ -4,7 +4,7 @@
 #include <assert.h>
 
 #include "config.h"
-#include "cmark.h"
+#include "cmark-gfm.h"
 #include "node.h"
 #include "buffer.h"
 #include "utf8.h"
@@ -254,6 +254,11 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     } else {
       LIT("]");
     }
+    break;
+
+  case CMARK_NODE_FOOTNOTE_DEFINITION:
+  case CMARK_NODE_FOOTNOTE_REFERENCE:
+    // TODO
     break;
 
   default:

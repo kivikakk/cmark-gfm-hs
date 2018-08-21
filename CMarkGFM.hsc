@@ -49,12 +49,12 @@ import qualified Data.ByteString as B
 import Data.Text.Encoding (encodeUtf8)
 import Control.Applicative ((<$>), (<*>))
 
-#include <cmark.h>
-#include <core-extensions.h>
+#include <cmark-gfm.h>
+#include <cmark-gfm-core-extensions.h>
 
 -- | Ensure core extensions are registered.
 ensurePluginsRegistered :: IO ()
-ensurePluginsRegistered = c_core_extensions_ensure_registered
+ensurePluginsRegistered = c_cmark_gfm_core_extensions_ensure_registered
 
 -- | Frees a cmark linked list, produced by extsToLlist.
 freeLlist :: LlistPtr a -> IO ()
@@ -377,8 +377,8 @@ ptrToNodeType ptr = do
         title     = c_cmark_node_get_title ptr >>= totext
         info      = c_cmark_node_get_fence_info ptr >>= totext
         alignments = do
-          ncols <- c_cmarkextensions_get_table_columns ptr
-          cols <- c_cmarkextensions_get_table_alignments ptr
+          ncols <- c_cmark_gfm_extensions_get_table_columns ptr
+          cols <- c_cmark_gfm_extensions_get_table_alignments ptr
           mapM (fmap ucharToAlignment . peekElemOff cols) [0..(fromIntegral ncols) - 1]
         ucharToAlignment (CUChar 108) = LeftAligned
         ucharToAlignment (CUChar 99)  = CenterAligned
@@ -498,145 +498,145 @@ fromtext t = B.useAsCString (encodeUtf8 t) return
 foreign import ccall "string.h strlen"
     c_strlen :: CString -> Int
 
-foreign import ccall "cmark.h cmark_node_new"
+foreign import ccall "cmark-gfm.h cmark_node_new"
     c_cmark_node_new :: Int -> IO NodePtr
 
-foreign import ccall "cmark.h cmark_render_html"
+foreign import ccall "cmark-gfm.h cmark_render_html"
     c_cmark_render_html :: NodePtr -> CInt -> LlistPtr ExtensionPtr -> IO CString
 
-foreign import ccall "cmark.h cmark_render_xml"
+foreign import ccall "cmark-gfm.h cmark_render_xml"
     c_cmark_render_xml :: NodePtr -> CInt -> IO CString
 
-foreign import ccall "cmark.h cmark_render_man"
+foreign import ccall "cmark-gfm.h cmark_render_man"
     c_cmark_render_man :: NodePtr -> CInt -> Int -> IO CString
 
-foreign import ccall "cmark.h cmark_render_latex"
+foreign import ccall "cmark-gfm.h cmark_render_latex"
     c_cmark_render_latex :: NodePtr -> CInt -> Int -> IO CString
 
-foreign import ccall "cmark.h cmark_render_commonmark"
+foreign import ccall "cmark-gfm.h cmark_render_commonmark"
     c_cmark_render_commonmark :: NodePtr -> CInt -> Int -> IO CString
 
-foreign import ccall "cmark.h cmark_parser_new"
+foreign import ccall "cmark-gfm.h cmark_parser_new"
     c_cmark_parser_new :: CInt -> IO ParserPtr
 
-foreign import ccall "cmark.h cmark_parser_feed"
+foreign import ccall "cmark-gfm.h cmark_parser_feed"
     c_cmark_parser_feed :: ParserPtr -> CString -> Int -> IO ()
 
-foreign import ccall "cmark.h cmark_parser_finish"
+foreign import ccall "cmark-gfm.h cmark_parser_finish"
     c_cmark_parser_finish :: ParserPtr -> IO NodePtr
 
-foreign import ccall "cmark.h cmark_parser_free"
+foreign import ccall "cmark-gfm.h cmark_parser_free"
     c_cmark_parser_free :: ParserPtr -> IO ()
 
-foreign import ccall "cmark.h cmark_node_get_type"
+foreign import ccall "cmark-gfm.h cmark_node_get_type"
     c_cmark_node_get_type :: NodePtr -> IO Int
 
-foreign import ccall "cmark.h cmark_node_first_child"
+foreign import ccall "cmark-gfm.h cmark_node_first_child"
     c_cmark_node_first_child :: NodePtr -> IO NodePtr
 
-foreign import ccall "cmark.h cmark_node_next"
+foreign import ccall "cmark-gfm.h cmark_node_next"
     c_cmark_node_next :: NodePtr -> IO NodePtr
 
-foreign import ccall "cmark.h cmark_node_get_literal"
+foreign import ccall "cmark-gfm.h cmark_node_get_literal"
     c_cmark_node_get_literal :: NodePtr -> IO CString
 
-foreign import ccall "cmark.h cmark_node_get_url"
+foreign import ccall "cmark-gfm.h cmark_node_get_url"
     c_cmark_node_get_url :: NodePtr -> IO CString
 
-foreign import ccall "cmark.h cmark_node_get_title"
+foreign import ccall "cmark-gfm.h cmark_node_get_title"
     c_cmark_node_get_title :: NodePtr -> IO CString
 
-foreign import ccall "cmark.h cmark_node_get_heading_level"
+foreign import ccall "cmark-gfm.h cmark_node_get_heading_level"
     c_cmark_node_get_heading_level :: NodePtr -> IO Int
 
-foreign import ccall "cmark.h cmark_node_get_list_type"
+foreign import ccall "cmark-gfm.h cmark_node_get_list_type"
     c_cmark_node_get_list_type :: NodePtr -> IO Int
 
-foreign import ccall "cmark.h cmark_node_get_list_tight"
+foreign import ccall "cmark-gfm.h cmark_node_get_list_tight"
     c_cmark_node_get_list_tight :: NodePtr -> IO Bool
 
-foreign import ccall "cmark.h cmark_node_get_list_start"
+foreign import ccall "cmark-gfm.h cmark_node_get_list_start"
     c_cmark_node_get_list_start :: NodePtr -> IO Int
 
-foreign import ccall "cmark.h cmark_node_get_list_delim"
+foreign import ccall "cmark-gfm.h cmark_node_get_list_delim"
     c_cmark_node_get_list_delim :: NodePtr -> IO Int
 
-foreign import ccall "cmark.h cmark_node_get_fence_info"
+foreign import ccall "cmark-gfm.h cmark_node_get_fence_info"
     c_cmark_node_get_fence_info :: NodePtr -> IO CString
 
-foreign import ccall "cmark.h cmark_node_get_start_line"
+foreign import ccall "cmark-gfm.h cmark_node_get_start_line"
     c_cmark_node_get_start_line :: NodePtr -> IO Int
 
-foreign import ccall "cmark.h cmark_node_get_start_column"
+foreign import ccall "cmark-gfm.h cmark_node_get_start_column"
     c_cmark_node_get_start_column :: NodePtr -> IO Int
 
-foreign import ccall "cmark.h cmark_node_get_end_line"
+foreign import ccall "cmark-gfm.h cmark_node_get_end_line"
     c_cmark_node_get_end_line :: NodePtr -> IO Int
 
-foreign import ccall "cmark.h cmark_node_get_end_column"
+foreign import ccall "cmark-gfm.h cmark_node_get_end_column"
     c_cmark_node_get_end_column :: NodePtr -> IO Int
 
-foreign import ccall "cmark.h cmark_node_get_on_enter"
+foreign import ccall "cmark-gfm.h cmark_node_get_on_enter"
     c_cmark_node_get_on_enter :: NodePtr -> IO CString
 
-foreign import ccall "cmark.h cmark_node_get_on_exit"
+foreign import ccall "cmark-gfm.h cmark_node_get_on_exit"
     c_cmark_node_get_on_exit :: NodePtr -> IO CString
 
-foreign import ccall "cmark.h cmark_node_append_child"
+foreign import ccall "cmark-gfm.h cmark_node_append_child"
     c_cmark_node_append_child :: NodePtr -> NodePtr -> IO Int
 
-foreign import ccall "cmark.h cmark_node_set_literal"
+foreign import ccall "cmark-gfm.h cmark_node_set_literal"
     c_cmark_node_set_literal :: NodePtr -> CString -> IO Int
 
-foreign import ccall "cmark.h cmark_node_set_url"
+foreign import ccall "cmark-gfm.h cmark_node_set_url"
     c_cmark_node_set_url :: NodePtr -> CString -> IO Int
 
-foreign import ccall "cmark.h cmark_node_set_title"
+foreign import ccall "cmark-gfm.h cmark_node_set_title"
     c_cmark_node_set_title :: NodePtr -> CString -> IO Int
 
-foreign import ccall "cmark.h cmark_node_set_heading_level"
+foreign import ccall "cmark-gfm.h cmark_node_set_heading_level"
     c_cmark_node_set_heading_level :: NodePtr -> Int -> IO Int
 
-foreign import ccall "cmark.h cmark_node_set_list_type"
+foreign import ccall "cmark-gfm.h cmark_node_set_list_type"
     c_cmark_node_set_list_type :: NodePtr -> Int -> IO Int
 
-foreign import ccall "cmark.h cmark_node_set_list_tight"
+foreign import ccall "cmark-gfm.h cmark_node_set_list_tight"
     c_cmark_node_set_list_tight :: NodePtr -> Bool -> IO Int
 
-foreign import ccall "cmark.h cmark_node_set_list_start"
+foreign import ccall "cmark-gfm.h cmark_node_set_list_start"
     c_cmark_node_set_list_start :: NodePtr -> Int -> IO Int
 
-foreign import ccall "cmark.h cmark_node_set_list_delim"
+foreign import ccall "cmark-gfm.h cmark_node_set_list_delim"
     c_cmark_node_set_list_delim :: NodePtr -> Int -> IO Int
 
-foreign import ccall "cmark.h cmark_node_set_fence_info"
+foreign import ccall "cmark-gfm.h cmark_node_set_fence_info"
     c_cmark_node_set_fence_info :: NodePtr -> CString -> IO Int
 
-foreign import ccall "cmark.h cmark_node_set_on_enter"
+foreign import ccall "cmark-gfm.h cmark_node_set_on_enter"
     c_cmark_node_set_on_enter :: NodePtr -> CString -> IO Int
 
-foreign import ccall "cmark.h cmark_node_set_on_exit"
+foreign import ccall "cmark-gfm.h cmark_node_set_on_exit"
     c_cmark_node_set_on_exit :: NodePtr -> CString -> IO Int
 
-foreign import ccall "cmark.h &cmark_node_free"
+foreign import ccall "cmark-gfm.h &cmark_node_free"
     c_cmark_node_free :: FunPtr (NodePtr -> IO ())
 
-foreign import ccall "core-extensions.h core_extensions_ensure_registered"
-    c_core_extensions_ensure_registered :: IO ()
+foreign import ccall "cmark-gfm-core-extensions.h cmark_gfm_core_extensions_ensure_registered"
+    c_cmark_gfm_core_extensions_ensure_registered :: IO ()
 
-foreign import ccall "cmark_extension_api.h cmark_find_syntax_extension"
+foreign import ccall "cmark-gfm-extension_api.h cmark_find_syntax_extension"
     c_cmark_find_syntax_extension :: CString -> IO ExtensionPtr
 
-foreign import ccall "cmark.h cmark_llist_append"
+foreign import ccall "cmark-gfm.h cmark_llist_append"
     c_cmark_llist_append :: MemPtr -> LlistPtr a -> Ptr () -> IO (LlistPtr a)
 
-foreign import ccall "cmark.h cmark_llist_free"
+foreign import ccall "cmark-gfm.h cmark_llist_free"
     c_cmark_llist_free :: MemPtr -> LlistPtr a -> IO ()
 
-foreign import ccall "cmark.h cmark_get_default_mem_allocator"
+foreign import ccall "cmark-gfm.h cmark_get_default_mem_allocator"
     c_cmark_mem :: MemPtr
 
-foreign import ccall "cmark_extension_api.h cmark_parser_attach_syntax_extension"
+foreign import ccall "cmark-gfm-extension_api.h cmark_parser_attach_syntax_extension"
     c_cmark_parser_attach_syntax_extension :: ParserPtr -> ExtensionPtr -> IO ()
 
 foreign import ccall "strikethrough.h &CMARK_NODE_STRIKETHROUGH"
@@ -651,8 +651,8 @@ foreign import ccall "table.h &CMARK_NODE_TABLE_ROW"
 foreign import ccall "table.h &CMARK_NODE_TABLE_CELL"
     c_CMARK_NODE_TABLE_CELL :: Ptr #type cmark_node_type
 
-foreign import ccall "core-extensions.h cmarkextensions_get_table_columns"
-    c_cmarkextensions_get_table_columns :: NodePtr -> IO CUShort
+foreign import ccall "cmark-gfm-core-extensions.h cmark_gfm_extensions_get_table_columns"
+    c_cmark_gfm_extensions_get_table_columns :: NodePtr -> IO CUShort
 
-foreign import ccall "core-extensions.h cmarkextensions_get_table_alignments"
-    c_cmarkextensions_get_table_alignments :: NodePtr -> IO (Ptr CUChar)
+foreign import ccall "cmark-gfm-core-extensions.h cmark_gfm_extensions_get_table_alignments"
+    c_cmark_gfm_extensions_get_table_alignments :: NodePtr -> IO (Ptr CUChar)
