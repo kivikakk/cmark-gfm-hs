@@ -76,7 +76,7 @@ library
   default-language:    Haskell2010
   ghc-options:         -Wall -fno-warn-unused-do-bind
   if flag(pkgconfig)
-    Extra-Libraries: cmark-gfm cmark-gfmextensions
+    Extra-Libraries: cmark-gfm cmark-gfm-extensions
   else
     cc-options:        -Wall -std=c99
     Include-dirs:      cbits
