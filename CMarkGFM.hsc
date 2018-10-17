@@ -15,7 +15,7 @@ module CMarkGFM (
   , optSourcePos
   , optHardBreaks
   , optSmart
-  , optSafe
+  , optUnsafe
   , extStrikethrough
   , extTable
   , extAutolink
@@ -278,10 +278,10 @@ optHardBreaks = CMarkOption #const CMARK_OPT_HARDBREAKS
 optSmart :: CMarkOption
 optSmart = CMarkOption #const CMARK_OPT_SMART
 
--- | Suppress rendering of raw HTML and potentially dangerous URLs in links
+-- | Allow rendering of raw HTML and potentially dangerous URLs in links
 -- and images.
-optSafe :: CMarkOption
-optSafe = CMarkOption #const CMARK_OPT_SAFE
+optUnsafe :: CMarkOption
+optUnsafe = CMarkOption #const CMARK_OPT_UNSAFE
 
 newtype CMarkExtension = CMarkExtension { unCMarkExtension :: String }
 

@@ -39,4 +39,4 @@
 #  endif
 #endif
 
-#endif
+#endif /* CMARK_GFM_EXPORT_H */
