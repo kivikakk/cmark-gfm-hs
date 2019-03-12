@@ -45,8 +45,8 @@ import Data.Data (Data)
 import Data.Typeable (Typeable)
 import Data.Text (Text, empty)
 import qualified Data.Text.Foreign as TF
-import qualified Data.ByteString as B
-import Data.Text.Encoding (encodeUtf8)
+import Data.ByteString.Unsafe (unsafePackMallocCString)
+import Data.Text.Encoding (decodeUtf8)
 import Control.Applicative ((<$>), (<*>))
 
 #include <cmark-gfm.h>
@@ -153,7 +153,7 @@ nodeToX renderer opts mbWidth node = Unsafe.unsafePerformIO $ do
   fptr <- newForeignPtr c_cmark_node_free nptr
   withForeignPtr fptr $ \ptr -> do
     cstr <- renderer ptr (combineOptions opts) (fromMaybe 0 mbWidth)
-    TF.peekCStringLen (cstr, c_strlen cstr)
+    decodeUtf8 <$> unsafePackMallocCString cstr
 
 commonmarkToX :: Renderer
               -> [CMarkOption]
@@ -173,8 +173,7 @@ commonmarkToX renderer opts exts mbWidth s = Unsafe.unsafePerformIO $
     fptr <- newForeignPtr c_cmark_node_free nptr
     withForeignPtr fptr $ \p -> do
       str <- renderer p opts' (fromMaybe 0 mbWidth)
-      t <- TF.peekCStringLen $! (str, c_strlen str)
-      return t
+      decodeUtf8 <$> unsafePackMallocCString str
 
 data ParserPhantom
 type ParserPtr = Ptr ParserPhantom
@@ -421,17 +420,17 @@ fromNode (Node _ nodeType children) = do
             BLOCK_QUOTE -> c_cmark_node_new (#const CMARK_NODE_BLOCK_QUOTE)
             HTML_BLOCK literal -> do
                      n <- c_cmark_node_new (#const CMARK_NODE_HTML_BLOCK)
-                     c_cmark_node_set_literal n =<< fromtext literal
+                     withtext literal (c_cmark_node_set_literal n)
                      return n
             CUSTOM_BLOCK onEnter onExit -> do
                      n <- c_cmark_node_new (#const CMARK_NODE_CUSTOM_BLOCK)
-                     c_cmark_node_set_on_enter n =<< fromtext onEnter
-                     c_cmark_node_set_on_exit  n =<< fromtext onExit
+                     withtext onEnter (c_cmark_node_set_on_enter n)
+                     withtext onExit  (c_cmark_node_set_on_exit  n)
                      return n
             CODE_BLOCK info literal -> do
                      n <- c_cmark_node_new (#const CMARK_NODE_CODE_BLOCK)
-                     c_cmark_node_set_literal n =<< fromtext literal
-                     c_cmark_node_set_fence_info n =<< fromtext info
+                     withtext literal (c_cmark_node_set_literal n)
+                     withtext info (c_cmark_node_set_fence_info n)
                      return n
             LIST attr   -> do
                      n <- c_cmark_node_new (#const CMARK_NODE_LIST)
@@ -453,30 +452,30 @@ fromNode (Node _ nodeType children) = do
             STRONG      -> c_cmark_node_new (#const CMARK_NODE_STRONG)
             LINK url title -> do
                      n <- c_cmark_node_new (#const CMARK_NODE_LINK)
-                     c_cmark_node_set_url n =<< fromtext url
-                     c_cmark_node_set_title n =<< fromtext title
+                     withtext url (c_cmark_node_set_url n)
+                     withtext title (c_cmark_node_set_title n)
                      return n
             IMAGE url title -> do
                      n <- c_cmark_node_new (#const CMARK_NODE_IMAGE)
-                     c_cmark_node_set_url n =<< fromtext url
-                     c_cmark_node_set_title n =<< fromtext title
+                     withtext url (c_cmark_node_set_url n)
+                     withtext title (c_cmark_node_set_title n)
                      return n
             TEXT literal -> do
                      n <- c_cmark_node_new (#const CMARK_NODE_TEXT)
-                     c_cmark_node_set_literal n =<< fromtext literal
+                     withtext literal (c_cmark_node_set_literal n)
                      return n
             CODE literal -> do
                      n <- c_cmark_node_new (#const CMARK_NODE_CODE)
-                     c_cmark_node_set_literal n =<< fromtext literal
+                     withtext literal (c_cmark_node_set_literal n)
                      return n
             HTML_INLINE literal -> do
                      n <- c_cmark_node_new (#const CMARK_NODE_HTML_INLINE)
-                     c_cmark_node_set_literal n =<< fromtext literal
+                     withtext literal (c_cmark_node_set_literal n)
                      return n
             CUSTOM_INLINE onEnter onExit -> do
                      n <- c_cmark_node_new (#const CMARK_NODE_CUSTOM_INLINE)
-                     c_cmark_node_set_on_enter n =<< fromtext onEnter
-                     c_cmark_node_set_on_exit  n =<< fromtext onExit
+                     withtext onEnter (c_cmark_node_set_on_enter n)
+                     withtext onExit  (c_cmark_node_set_on_exit  n)
                      return n
             SOFTBREAK   -> c_cmark_node_new (#const CMARK_NODE_SOFTBREAK)
             LINEBREAK   -> c_cmark_node_new (#const CMARK_NODE_LINEBREAK)
@@ -492,8 +491,8 @@ totext str
   | str == nullPtr = return empty
   | otherwise      = TF.peekCStringLen (str, c_strlen str)
 
-fromtext :: Text -> IO CString
-fromtext t = B.useAsCString (encodeUtf8 t) return
+withtext :: Text -> (CString -> IO a) -> IO a
+withtext t f = TF.withCStringLen t (f . fst)
 
 foreign import ccall "string.h strlen"
     c_strlen :: CString -> Int
