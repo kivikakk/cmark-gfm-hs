@@ -3,7 +3,7 @@ version:             0.1.6
 synopsis:            Fast, accurate GitHub Flavored Markdown parser and renderer
 description:
   This package provides Haskell bindings for
-  <https://github.com/github/cmark libcmark-gfm>, the reference
+  <https://github.com/github/cmark-gfm libcmark-gfm>, the reference
   parser for <https://github.github.com/gfm/ GitHub Flavored Markdown>, a fully
   specified variant of Markdown. It includes sources for
   libcmark-gfm (0.28.0) and does not require prior installation of the
@@ -51,6 +51,7 @@ extra-source-files:  README.md
                      cbits/strikethrough.h
                      cbits/table.h
                      cbits/tagfilter.h
+                     cbits/tasklist.h
                      cbits/cmark-gfm-extensions_export.h
                      cbits/map.h
                      cbits/footnotes.h
@@ -112,6 +113,7 @@ library
                        cbits/strikethrough.c
                        cbits/table.c
                        cbits/tagfilter.c
+                       cbits/tasklist.c
                        cbits/footnotes.c
                        cbits/map.c
 
