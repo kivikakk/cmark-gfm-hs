@@ -1,3 +1,7 @@
+cmark-gfm 0.1.7 (13 Mar 2019)
+
+  * Update to cmark-gfm 0.28.3.gfm.20.
+
 cmark 0.5.6.1 (11 Mar 2019)
 
   * Fix CString memory leaks (Anders Kaseorg).  The renderer functions return
