@@ -43,7 +43,7 @@ import Data.Maybe (fromMaybe)
 import GHC.Generics (Generic)
 import Data.Data (Data)
 import Data.Typeable (Typeable)
-import Data.Text (Text, empty)
+import Data.Text (Text, empty, snoc)
 import qualified Data.Text.Foreign as TF
 import Data.ByteString.Unsafe (unsafePackMallocCString)
 import Data.Text.Encoding (decodeUtf8)
@@ -492,7 +492,7 @@ totext str
   | otherwise      = TF.peekCStringLen (str, c_strlen str)
 
 withtext :: Text -> (CString -> IO a) -> IO a
-withtext t f = TF.withCStringLen t (f . fst)
+withtext t f = TF.withCStringLen (snoc t '\0') (f . fst)
 
 foreign import ccall "string.h strlen"
     c_strlen :: CString -> Int
