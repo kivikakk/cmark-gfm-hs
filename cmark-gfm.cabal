@@ -1,12 +1,12 @@
 name:                cmark-gfm
-version:             0.1.7
+version:             0.1.8
 synopsis:            Fast, accurate GitHub Flavored Markdown parser and renderer
 description:
   This package provides Haskell bindings for
   <https://github.com/github/cmark-gfm libcmark-gfm>, the reference
   parser for <https://github.github.com/gfm/ GitHub Flavored Markdown>, a fully
   specified variant of Markdown. It includes sources for
-  libcmark-gfm (0.28.0) and does not require prior installation of the
+  libcmark-gfm (0.28.3.gfm.20) and does not require prior installation of the
   C library.
 
 homepage:            https://github.com/kivikakk/cmark-gfm-hs
@@ -14,7 +14,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Ashe Connor
 maintainer:          kivikakk@github.com
-copyright:           (C) 2015--17 John MacFarlane, (C) 2017 Ashe Connor
+copyright:           (C) 2015--17 John MacFarlane, (C) 2017--19 Ashe Connor
 category:            Text
 tested-with:         GHC == 7.4.2, GHC == 7.6.3, GHC == 7.8.2, GHC == 7.10.3
 build-type:          Simple
