@@ -1,3 +1,7 @@
+cmark-gfm 0.2.0 (8 Apr 2019)
+
+  * Pull in upstream changes.
+
 cmark 0.6 (08 Apr 2019)
 
   * Update to cmark 0.29.0.
