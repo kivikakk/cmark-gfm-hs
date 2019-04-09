@@ -15,6 +15,7 @@ module CMarkGFM (
   , optSourcePos
   , optHardBreaks
   , optSmart
+  , optSafe
   , optUnsafe
   , extStrikethrough
   , extTable
@@ -276,6 +277,11 @@ optHardBreaks = CMarkOption #const CMARK_OPT_HARDBREAKS
 -- | Convert straight quotes to curly, @---@ to em-dash, @--@ to en-dash.
 optSmart :: CMarkOption
 optSmart = CMarkOption #const CMARK_OPT_SMART
+
+-- | optSafe is defined here for API compatibility, but it no longer has any
+-- effect. "Safe" mode is now the default: set optUnsafe to disable it.
+optSafe :: CMarkOption
+optSafe = CMarkOption #const CMARK_OPT_SAFE
 
 -- | Allow rendering of raw HTML and potentially dangerous URLs in links
 -- and images.
