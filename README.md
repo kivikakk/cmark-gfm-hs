@@ -44,22 +44,17 @@ libraries for Haskell:
   - **Ease of installation:** cmark is portable and has minimal
     dependencies.
 
-cmark does not provide Haskell versions of the whole [libcmark-gfm]
+cmark-gfm does not provide Haskell versions of the whole [libcmark-gfm]
 API, which is built around mutable `cmark_node` objects.  Instead, it
 provides functions for converting CommonMark to HTML (and other
 formats), and a function for converting CommonMark to a `Node`
 tree that can be processed further using Haskell.
 
-**A note on security:**  This library does not attempt to sanitize
-HTML output.  We recommend using [xss-sanitize] to filter the output,
-or enabling `optSafe` to filter out all raw HTML and potentially
-dangerous URLs.
-
 **A note on stability:**  There is a good chance the API will change
 significantly after this early release.
 
 [GitHub Flavored Markdown]: https://github.github.com/gfm/
-[libcmark-gfm]: http://github.com/github/cmark
+[libcmark-gfm]: http://github.com/github/cmark-gfm
 [benchmarks]: https://github.com/jgm/cmark/blob/master/benchmarks.md
 [cheapskate]: https://hackage.haskell.org/package/cheapskate
 [pandoc]: https://hackage.haskell.org/package/pandoc
