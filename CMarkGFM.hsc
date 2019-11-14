@@ -21,6 +21,7 @@ module CMarkGFM (
   , extTable
   , extAutolink
   , extTagfilter
+  , extTaskList
   , Node(..)
   , NodeType(..)
   , PosInfo(..)
@@ -301,6 +302,9 @@ extAutolink = CMarkExtension "autolink"
 
 extTagfilter :: CMarkExtension
 extTagfilter = CMarkExtension "tagfilter"
+
+extTaskList :: CMarkExtension
+extTaskList = CMarkExtension "tasklist"
 
 ptrToNodeType :: NodePtr -> IO NodeType
 ptrToNodeType ptr = do
