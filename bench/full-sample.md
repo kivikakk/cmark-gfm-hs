@@ -499,6 +499,21 @@ of a list item
 
  - - - - - - - - - deeply-nested one-element item
 
+- [ ] a task list
+- [x] a check item in the task list
+
+- [ ] loose task list item
+
+- [x] loose checked task list item
+
+- [ ] nested items in the task list
+  - [ ] nested item 1
+  - [x] checked nested item 2
+      - [ ] must go deeper
+      - [x] checked deeper nested item 2
+          - [ ] must go even deeper
+          - [x] checked even deeper nested item 2
+
 [1] [2] [3] [1] [2] [3]
 
 [looooooooooooooooooooooooooooooooooooooooooooooooooong label]
