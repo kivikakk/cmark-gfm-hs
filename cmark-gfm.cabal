@@ -13,7 +13,7 @@ homepage:            https://github.com/kivikakk/cmark-gfm-hs
 license:             BSD3
 license-file:        LICENSE
 author:              Ashe Connor
-maintainer:          kivikakk@github.com
+maintainer:          ashe@kivikakk.ee
 copyright:           (C) 2015--17 John MacFarlane, (C) 2017--19 Ashe Connor
 category:            Text
 build-type:          Simple
