@@ -1,0 +1,12 @@
+on: [push, pull_request]
+
+name: build
+
+jobs:
+  haskell:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: stack build
+      - run: stack test
