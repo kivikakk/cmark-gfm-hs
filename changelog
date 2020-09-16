@@ -1,3 +1,7 @@
+cmark-gfm 0.2.2 (16 Sep 2020)
+
+  * Pull in upstream changes.
+
 cmark-gfm 0.2.1 (15 Nov 2019)
 
   * Add tasklist support (#16, Christian Gill).
