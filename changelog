@@ -1,3 +1,7 @@
+cmark-gfm 0.2.4 (22 Sep 2022)
+
+  * Pull in upstream changes (includes security fix).
+
 cmark-gfm 0.2.3 (9 Mar 2022)
 
   * Pull in upstream changes.
