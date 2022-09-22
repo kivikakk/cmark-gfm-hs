@@ -33,5 +33,6 @@ tests = TestList [
   , "<xmp>\n" ~=? commonmarkToHtml [optUnsafe] [] "<xmp>"
   , "&lt;xmp>\n" ~=? commonmarkToHtml [optUnsafe] [extTagfilter] "<xmp>"
   , "<ul>\n<li><input type=\"checkbox\" disabled=\"\" /> foo</li>\n<li><input type=\"checkbox\" checked=\"\" disabled=\"\" /> bar</li>\n</ul>\n" ~=? commonmarkToHtml [] [extTaskList] "- [ ] foo\n- [x] bar"
+  , "<p>Here is footnote<sup class=\"footnote-ref\"><a href=\"#fn-1\" id=\"fnref-1\" data-footnote-ref>1</a></sup></p>\n<section class=\"footnotes\" data-footnotes>\n<ol>\n<li id=\"fn-1\">\n<p>abc <a href=\"#fnref-1\" class=\"footnote-backref\" data-footnote-backref aria-label=\"Back to content\">↩</a></p>\n</li>\n</ol>\n</section>\n" ~=? commonmarkToHtml [optFootnotes] [] "Here is footnote[^1]\n\n[^1]: abc"
   ]
 
