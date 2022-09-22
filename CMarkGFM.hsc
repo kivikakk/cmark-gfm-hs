@@ -17,6 +17,7 @@ module CMarkGFM (
   , optSmart
   , optSafe
   , optUnsafe
+  , optFootnotes
   , extStrikethrough
   , extTable
   , extAutolink
@@ -252,6 +253,8 @@ data NodeType =
   | TABLE [TableCellAlignment]
   | TABLE_ROW
   | TABLE_CELL
+  | FOOTNOTE_REFERENCE
+  | FOOTNOTE_DEFINITION
   deriving (Show, Read, Eq, Ord, Typeable, Data, Generic)
 
 data PosInfo = PosInfo{ startLine   :: Int
@@ -288,6 +291,10 @@ optSafe = CMarkOption #const CMARK_OPT_SAFE
 -- and images.
 optUnsafe :: CMarkOption
 optUnsafe = CMarkOption #const CMARK_OPT_UNSAFE
+
+-- | Enable footnote syntax support (equivalent of footnotes extension for official cmark-gfm)
+optFootnotes :: CMarkOption
+optFootnotes = CMarkOption #const CMARK_OPT_FOOTNOTES
 
 newtype CMarkExtension = CMarkExtension { unCMarkExtension :: String }
 
@@ -351,6 +358,10 @@ ptrToNodeType ptr = do
          -> return SOFTBREAK
        #const CMARK_NODE_LINEBREAK
          -> return LINEBREAK
+       #const CMARK_NODE_FOOTNOTE_DEFINITION
+         -> return FOOTNOTE_DEFINITION
+       #const CMARK_NODE_FOOTNOTE_REFERENCE
+         -> return FOOTNOTE_REFERENCE
        _ -> if nodeType == fromIntegral (Unsafe.unsafePerformIO $ peek c_CMARK_NODE_STRIKETHROUGH) then
               return STRIKETHROUGH
             else if nodeType == fromIntegral (Unsafe.unsafePerformIO $ peek c_CMARK_NODE_TABLE) then
@@ -490,9 +501,13 @@ fromNode (Node _ nodeType children) = do
             SOFTBREAK   -> c_cmark_node_new (#const CMARK_NODE_SOFTBREAK)
             LINEBREAK   -> c_cmark_node_new (#const CMARK_NODE_LINEBREAK)
             STRIKETHROUGH -> c_cmark_node_new (fromIntegral . Unsafe.unsafePerformIO $ peek c_CMARK_NODE_STRIKETHROUGH)
-            TABLE _       -> error "constructing table not supported"
-            TABLE_ROW     -> error "constructing table row not supported"
-            TABLE_CELL    -> error "constructing table cell not supported"
+            TABLE _             -> error "constructing table not supported"
+            TABLE_ROW           -> error "constructing table row not supported"
+            TABLE_CELL          -> error "constructing table cell not supported"
+            FOOTNOTE_DEFINITION -> error "constructing footnotes not supported"
+            FOOTNOTE_REFERENCE -> error "constructing footnotes not supported"
+
+
   mapM_ (\child -> fromNode child >>= c_cmark_node_append_child node) children
   return node
 
