@@ -1,5 +1,5 @@
 name:                cmark-gfm
-version:             0.2.4
+version:             0.2.5
 synopsis:            Fast, accurate GitHub Flavored Markdown parser and renderer
 description:
   This package provides Haskell bindings for
