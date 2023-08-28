@@ -51,7 +51,6 @@ extra-source-files:  README.md
                      cbits/table.h
                      cbits/tagfilter.h
                      cbits/tasklist.h
-                     cbits/cmark-gfm-extensions_export.h
                      cbits/map.h
                      cbits/footnotes.h
                      bench/sample.md
