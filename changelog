@@ -1,3 +1,7 @@
+cmark-gfm 0.2.6 (28 Aug 2023)
+
+  * Pull in upstream changes (includes security fixes).
+
 cmark-gfm 0.2.5 (27 Sep 2022)
 
   * Add support for enabling footnotes (#26, Anton Sorokin).
