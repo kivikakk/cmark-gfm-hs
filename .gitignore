@@ -12,3 +12,5 @@ cabal.config
 stack.yaml.lock
 .stack-work/
 dist-newstyle
+/result
+/result-*
