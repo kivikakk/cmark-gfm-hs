@@ -33,9 +33,6 @@ cbits/cmark-gfm_export.h: $(CMARK_DIR)/build/src/cmark-gfm_export.h
 cbits/cmark-gfm_version.h: $(CMARK_DIR)/build/src/cmark-gfm_version.h
 	cp $< $@
 
-cbits/cmark-gfm-extensions_export.h: $(CMARK_DIR)/build/extensions/cmark-gfm-extensions_export.h
-	cp $< $@
-
 cbits/%: $(CMARK_DIR)/src/%
 	cp $< $@
 
