@@ -1,3 +1,12 @@
+cmark-gfm 0.2.7 (unreleased)
+
+  * Pull in upstream changes.
+
+cmark 0.7 (08 Jul 2023)
+
+  * Allow text 2.
+  * Remove benchmark suite.
+
 cmark-gfm 0.2.6 (28 Aug 2023)
 
   * Pull in upstream changes (includes security fixes).

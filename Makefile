@@ -16,12 +16,6 @@ install:
 clean:
 	cabal clean
 
-bench:
-	cabal configure --enable-benchmarks && \
-	cabal install --only-dependencies && \
-	cabal build && \
-	cabal bench
-
 update-c-sources: $(C_SOURCES)
 
 cbits/config.h: $(CMARK_DIR)/build/src/config.h
@@ -39,4 +33,4 @@ cbits/%: $(CMARK_DIR)/src/%
 cbits/%: $(CMARK_DIR)/extensions/%
 	cp $< $@
 
-.PHONY: build prep install test clean bench update-c-sources
+.PHONY: build prep install test clean update-c-sources

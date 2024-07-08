@@ -1,5 +1,6 @@
 dist
 cabal-dev
+cabal.project.local
 *.o
 *.hi
 *.chi
