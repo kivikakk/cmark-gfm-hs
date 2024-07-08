@@ -1,4 +1,5 @@
-# [cmark-gfm-hs](https://hrzn.ee/kivikakk/cmark-gfm-hs)
+cmark-gfm-hs
+============
 
 This package provides Haskell bindings for [libcmark-gfm], the reference
 parser for [GitHub Flavored Markdown], a fully specified variant of Markdown.
