@@ -46,7 +46,7 @@ import Data.Maybe (fromMaybe)
 import GHC.Generics (Generic)
 import Data.Data (Data)
 import Data.Typeable (Typeable)
-import Data.Text (Text, empty, snoc)
+import Data.Text (Text, empty, pack, snoc)
 import qualified Data.Text.Foreign as TF
 import Data.ByteString.Unsafe (unsafePackMallocCString)
 import Data.Text.Encoding (decodeUtf8)
@@ -239,6 +239,7 @@ data NodeType =
   | HEADING Level
   | LIST ListAttributes
   | ITEM
+  | TASKLIST Bool
   | TEXT Text
   | SOFTBREAK
   | LINEBREAK
@@ -335,7 +336,11 @@ ptrToNodeType ptr = do
        #const CMARK_NODE_LIST
          -> LIST <$> listAttr
        #const CMARK_NODE_ITEM
-         -> return ITEM
+         -> do
+           ts <- typeString
+           if ts == pack "tasklist"
+             then TASKLIST <$> checked
+             else return ITEM
        #const CMARK_NODE_HEADING
          -> HEADING <$> level
        #const CMARK_NODE_EMPH
@@ -372,7 +377,8 @@ ptrToNodeType ptr = do
               return TABLE_CELL
             else
               error $ "Unknown node type " ++ (show nodeType)
-  where literal   = c_cmark_node_get_literal ptr >>= totext
+  where typeString = c_cmark_node_get_type_string ptr >>= totext
+        literal   = c_cmark_node_get_literal ptr >>= totext
         level     = c_cmark_node_get_heading_level ptr
         onEnter    = c_cmark_node_get_on_enter ptr >>= totext
         onExit     = c_cmark_node_get_on_exit  ptr >>= totext
@@ -400,6 +406,7 @@ ptrToNodeType ptr = do
           ncols <- c_cmark_gfm_extensions_get_table_columns ptr
           cols <- c_cmark_gfm_extensions_get_table_alignments ptr
           mapM (fmap ucharToAlignment . peekElemOff cols) [0..(fromIntegral ncols) - 1]
+        checked   = c_cmark_gfm_extensions_get_tasklist_item_checked ptr
         ucharToAlignment (CUChar 108) = LeftAligned
         ucharToAlignment (CUChar 99)  = CenterAligned
         ucharToAlignment (CUChar 114) = RightAligned
@@ -464,7 +471,13 @@ fromNode (Node _ nodeType children) = do
                      c_cmark_node_set_list_tight n $ listTight attr
                      c_cmark_node_set_list_start n $ listStart attr
                      return n
-            ITEM        -> c_cmark_node_new (#const CMARK_NODE_ITEM)
+            ITEM         -> c_cmark_node_new (#const CMARK_NODE_ITEM)
+            TASKLIST checked -> do
+              n <- c_cmark_node_new (#const CMARK_NODE_ITEM)
+              tasklistExt <- withCString (unCMarkExtension extTaskList) c_cmark_find_syntax_extension
+              c_cmark_node_set_syntax_extension n tasklistExt
+              c_cmark_gfm_extensions_set_tasklist_item_checked n checked
+              return n
             HEADING lev  -> do
                      n <- c_cmark_node_new (#const CMARK_NODE_HEADING)
                      c_cmark_node_set_heading_level n lev
@@ -554,6 +567,9 @@ foreign import ccall "cmark-gfm.h cmark_parser_free"
 
 foreign import ccall "cmark-gfm.h cmark_node_get_type"
     c_cmark_node_get_type :: NodePtr -> IO Int
+
+foreign import ccall "cmark-gfm.h cmark_node_get_type_string"
+    c_cmark_node_get_type_string :: NodePtr -> IO CString
 
 foreign import ccall "cmark-gfm.h cmark_node_first_child"
     c_cmark_node_first_child :: NodePtr -> IO NodePtr
@@ -680,3 +696,12 @@ foreign import ccall "cmark-gfm-core-extensions.h cmark_gfm_extensions_get_table
 
 foreign import ccall "cmark-gfm-core-extensions.h cmark_gfm_extensions_get_table_alignments"
     c_cmark_gfm_extensions_get_table_alignments :: NodePtr -> IO (Ptr CUChar)
+
+foreign import ccall "cmark-gfm-core-extensions.h cmark_node_set_syntax_extension"
+    c_cmark_node_set_syntax_extension :: NodePtr -> ExtensionPtr -> IO Int
+
+foreign import ccall "cmark-gfm-core-extensions.h cmark_gfm_extensions_set_tasklist_item_checked"
+    c_cmark_gfm_extensions_set_tasklist_item_checked :: NodePtr -> Bool -> IO Int
+
+foreign import ccall "cmark-gfm-core-extensions.h cmark_gfm_extensions_get_tasklist_item_checked"
+    c_cmark_gfm_extensions_get_tasklist_item_checked :: NodePtr -> IO Bool
