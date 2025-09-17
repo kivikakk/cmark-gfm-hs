@@ -7,55 +7,55 @@
         ]
       },
       "locked": {
+        "type": "github",
         "lastModified": 1754091436,
         "narHash": "sha256-XKqDMN1/Qj1DKivQvscI4vmHfDfvYR2pfuFOJiCeewM=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "67df8c627c2c39c41dbec76a1f201929929ab0bd",
-        "type": "github"
+        "rev": "67df8c627c2c39c41dbec76a1f201929929ab0bd"
       },
       "original": {
+        "type": "github",
         "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "type": "github"
+        "repo": "flake-parts"
       }
     },
     "haskell-flake": {
       "locked": {
+        "type": "github",
         "lastModified": 1754243009,
         "narHash": "sha256-CdjcEqaPen5dEw0xHKez6wAfam/pcgiGF0Rl0UVj/fQ=",
         "owner": "srid",
         "repo": "haskell-flake",
-        "rev": "9559face152d6fe06c8cb7b81381c3d79159b151",
-        "type": "github"
+        "rev": "9559face152d6fe06c8cb7b81381c3d79159b151"
       },
       "original": {
+        "type": "github",
         "owner": "srid",
-        "repo": "haskell-flake",
-        "type": "github"
+        "repo": "haskell-flake"
       }
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1751741127,
-        "narHash": "sha256-t75Shs76NgxjZSgvvZZ9qOmz5zuBE8buUaYD28BMTxg=",
+        "type": "github",
+        "lastModified": 1757810152,
+        "narHash": "sha256-Vp9K5ol6h0J90jG7Rm4RWZsCB3x7v5VPx588TQ1dkfs=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "29e290002bfff26af1db6f64d070698019460302",
-        "type": "github"
+        "rev": "9a094440e02a699be5c57453a092a8baf569bdad"
       },
       "original": {
+        "type": "github",
         "owner": "NixOS",
-        "ref": "nixos-25.05",
         "repo": "nixpkgs",
-        "type": "github"
+        "ref": "nixos-25.05"
       }
     },
     "root": {
       "inputs": {
-        "flake-parts": "flake-parts",
         "haskell-flake": "haskell-flake",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "flake-parts": "flake-parts"
       }
     }
   },
