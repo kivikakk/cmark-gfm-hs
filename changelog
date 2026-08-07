@@ -2,6 +2,29 @@ cmark-gfm 0.2.7 (unreleased)
 
   * Pull in upstream changes.
 
+  * FORK: make core-extension registration thread-safe.
+
+    Every parse entry point calls ensurePluginsRegistered, including with an
+    empty extension list, and the exported API is pure (commonmarkToNode is
+    unsafePerformIO), so callers can and do parse on several threads at once.
+    The C function underneath guards itself with a plain `static int
+    registered` check-then-set, so two threads could both register; the second
+    registration calls cmark_register_node_flag on the already-initialised
+    global CMARK_NODE__TABLE_VISITED, which prints "flag initialization error
+    in cmark_register_node_flag" and abort()s the process.
+
+    ensurePluginsRegistered now serializes on an MVar and runs the C call
+    exactly once. A NOINLINE CAF would not do: GHC's lazy blackholing permits
+    two threads to enter one thunk.
+
+    Measured on a 16-thread reproducer, 20 runs each: stock aborted 7/20,
+    patched 0/20. The test suite gained a regression case and -with-rtsopts=-N
+    so it has real parallelism to race over; a regression shows up as the
+    suite dying with exit code 134, since SIGABRT is not catchable.
+
+    Not upstreamed yet. See mori://kivikakk/cmark-gfm-hs upstream-issues entry
+    `cmark-gfm-hs-unsafe-concurrent-extension-registration`.
+
 cmark 0.7 (08 Jul 2023)
 
   * Allow text 2.

@@ -51,13 +51,46 @@ import qualified Data.Text.Foreign as TF
 import Data.ByteString.Unsafe (unsafePackMallocCString)
 import Data.Text.Encoding (decodeUtf8)
 import Control.Applicative ((<$>), (<*>))
+import Control.Concurrent.MVar (MVar, newMVar, modifyMVar_)
 
 #include <cmark-gfm.h>
 #include <cmark-gfm-core-extensions.h>
 
--- | Ensure core extensions are registered.
+-- | Guards 'ensurePluginsRegistered'. 'False' until registration has run.
+{-# NOINLINE pluginRegistrationGuard #-}
+pluginRegistrationGuard :: MVar Bool
+pluginRegistrationGuard = Unsafe.unsafePerformIO (newMVar False)
+
+-- | Ensure core extensions are registered, exactly once, whatever thread asks.
+--
+-- The C function underneath guards itself with a plain @static int registered@
+-- check-then-set (@extensions\/core-extensions.c@) and is therefore not
+-- thread-safe. Two threads can both observe it unregistered and both call
+-- @cmark_register_plugin@, whereupon @create_table_extension@ calls
+-- @cmark_register_node_flag@ a second time on the already-initialised global
+-- @CMARK_NODE__TABLE_VISITED@. That function's response to a non-zero flag is
+-- to print @flag initialization error in cmark_register_node_flag@ and
+-- @abort()@ the process -- so the symptom is SIGABRT, not an exception a caller
+-- could catch. (@cmark_register_plugin@ also appends to the global
+-- @syntax_extensions@ list unguarded, a second race that merely happens to be
+-- silent.)
+--
+-- Every entry point that resolves extensions calls this, including with an
+-- empty extension list, and the exported API is pure --- 'commonmarkToNode' is
+-- 'Unsafe.unsafePerformIO' --- so nothing stops a caller from parsing on
+-- several threads at once. Serializing is therefore this binding's job, not the
+-- caller's.
+--
+-- A @NOINLINE@ CAF would not be enough: GHC's lazy blackholing permits two
+-- threads to enter the same thunk, which is the exact scenario being prevented.
 ensurePluginsRegistered :: IO ()
-ensurePluginsRegistered = c_cmark_gfm_core_extensions_ensure_registered
+ensurePluginsRegistered =
+  modifyMVar_ pluginRegistrationGuard $ \registered ->
+    if registered
+      then return True
+      else do
+        c_cmark_gfm_core_extensions_ensure_registered
+        return True
 
 -- | Frees a cmark linked list, produced by extsToLlist.
 freeLlist :: LlistPtr a -> IO ()
