@@ -118,5 +118,5 @@ Test-Suite test-cmark-gfm
   main-is:        test-cmark.hs
   hs-source-dirs: test
   build-depends:  base, cmark-gfm, text, HUnit >= 1.2 && < 1.7
-  ghc-options:    -Wall -fno-warn-unused-do-bind -threaded
+  ghc-options:    -Wall -fno-warn-unused-do-bind -threaded -with-rtsopts=-N
   default-language: Haskell2010
